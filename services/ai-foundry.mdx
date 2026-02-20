@@ -1,0 +1,549 @@
+---
+title: Microsoft Foundry Overview
+description: Unified Azure platform for building AI agents, working with models, and deploying generative AI applications at enterprise scale.
+---
+
+# Microsoft Foundry
+
+Microsoft Foundry is a unified Azure platform-as-a-service offering for enterprise AI operations, model builders, and application development. This foundation combines production-grade infrastructure with friendly interfaces, enabling developers to focus on building applications rather than managing infrastructure.
+
+<Note>
+  **Rebranding**: Azure AI Foundry is now Microsoft Foundry. Screenshots and documentation are being updated to reflect this change.
+</Note>
+
+## What is Microsoft Foundry?
+
+Microsoft Foundry unifies agents, models, and tools under a single management grouping with built-in enterprise-readiness capabilities including tracing, monitoring, evaluations, and customizable enterprise setup configurations. The platform provides streamlined management through unified Role-based access control (RBAC), networking, and policies under one Azure resource provider namespace.
+
+<CardGroup cols={2}>
+  <Card title="Build Agents" icon="robot">
+    Create AI agents tailored to your needs with custom instructions and advanced tools
+  </Card>
+  
+  <Card title="Work with Models" icon="brain">
+    Access cutting-edge AI models from multiple providers with consistent APIs
+  </Card>
+  
+  <Card title="Deploy at Scale" icon="chart-line">
+    Transform proofs of concept into production applications with enterprise features
+  </Card>
+  
+  <Card title="Collaborate" icon="users">
+    Team-based development with shared resources and secure isolation
+  </Card>
+</CardGroup>
+
+## Key Capabilities
+
+### Multi-Agent Orchestration
+
+Build advanced automation using SDKs for C# and Python that enable collaborative agent behavior and complex workflow execution.
+
+```python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import AgentWorkflow
+
+# Create a multi-agent workflow
+workflow = AgentWorkflow(
+    name="customer-support",
+    agents=[
+        {"id": "triage-agent", "role": "classifier"},
+        {"id": "technical-agent", "role": "specialist"},
+        {"id": "billing-agent", "role": "specialist"}
+    ],
+    orchestration="sequential"
+)
+
+# Workflow automatically routes between agents
+result = client.workflows.run(workflow, input="Need help with billing")
+```
+
+### Expanded Tool Access
+
+Access the Foundry tool catalog (preview) with over 1,400 tools through public and private catalogs.
+
+<Tabs>
+  <Tab title="Built-in Tools">
+    - **Code Interpreter**: Execute Python code in a sandbox
+    - **Function Calling**: Integrate custom business logic
+    - **File Search**: Search through uploaded documents
+    - **Bing Search**: Access real-time web information
+    - **Azure AI Search**: Query indexed knowledge bases
+  </Tab>
+  
+  <Tab title="Tool Catalog">
+    - Microsoft 365 integrations
+    - Azure service connectors
+    - Third-party API integrations
+    - Custom tool deployment
+    - MCP protocol support
+  </Tab>
+  
+  <Tab title="Custom Tools">
+    Create your own tools with Azure Functions:
+    
+    ```python
+    from azure.ai.projects.models import FunctionTool
+    
+    tool = FunctionTool(
+        name="get_customer_info",
+        description="Retrieve customer details from database",
+        parameters={
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "string"}
+            }
+        },
+        function=my_function_handler
+    )
+    ```
+  </Tab>
+</Tabs>
+
+### Enhanced Memory Capabilities
+
+Use memory to help your agent retain and recall contextual information across interactions.
+
+```python
+from azure.ai.projects.models import MemoryConfiguration
+
+# Configure agent memory
+memory_config = MemoryConfiguration(
+    type="semantic",
+    retention_policy="session",  # or "permanent"
+    max_tokens=4000
+)
+
+agent = client.agents.create(
+    model="gpt-4",
+    instructions="You are a personal assistant with memory.",
+    memory=memory_config
+)
+
+# Agent remembers context across conversations
+thread = client.agents.create_thread()
+client.agents.create_message(thread.id, "user", "My name is Alice")
+# ... later in conversation ...
+client.agents.create_message(thread.id, "user", "What's my name?")
+# Agent responds: "Your name is Alice"
+```
+
+<Note>
+  Memory maintains continuity, adapts to user needs, and delivers tailored experiences without requiring repeated input.
+</Note>
+
+### Knowledge Integration
+
+Connect your agent to a Foundry IQ knowledge base to ground responses in enterprise or web content.
+
+```python
+from azure.ai.projects.models import KnowledgeBase
+
+# Create knowledge base
+kb = client.knowledge.create(
+    name="company-docs",
+    sources=[
+        {"type": "azure_blob", "container": "documents"},
+        {"type": "sharepoint", "site": "company-portal"},
+        {"type": "web", "urls": ["https://company.com/docs"]}
+    ]
+)
+
+# Attach to agent
+agent = client.agents.create(
+    model="gpt-4",
+    instructions="Answer questions using company documentation.",
+    knowledge_base_id=kb.id,
+    citation_mode="inline"  # Include source citations
+)
+```
+
+This integration provides reliable, citation-backed answers for multi-turn conversations.
+
+### Real-Time Observability
+
+Monitor performance and governance using built-in metrics and model tracking tools.
+
+<CardGroup cols={3}>
+  <Card title="Tracing" icon="route">
+    Track agent execution flow
+    
+    - Request/response pairs
+    - Tool invocations
+    - Token usage
+    - Latency metrics
+  </Card>
+  
+  <Card title="Evaluations" icon="chart-bar">
+    Measure agent quality
+    
+    - Accuracy metrics
+    - Groundedness scoring
+    - Safety checks
+    - Custom evaluators
+  </Card>
+  
+  <Card title="Monitoring" icon="gauge">
+    Production health
+    
+    - Real-time dashboards
+    - Alert configuration
+    - Cost tracking
+    - Usage patterns
+  </Card>
+</CardGroup>
+
+## Project Types
+
+Microsoft Foundry (classic) supports two types of projects:
+
+### Foundry Projects (Recommended)
+
+Designed for agent-centric development with the latest capabilities.
+
+<Check>
+  **Available Features:**
+  - Agents (GA)
+  - Models from Azure and Marketplace
+  - Foundry SDK and API (full support)
+  - OpenAI SDK compatibility
+  - Evaluations (preview)
+  - Playgrounds and datasets
+  - Project files API
+  - BYOK (Bring Your Own Key Vault)
+</Check>
+
+### Hub-Based Projects (Legacy)
+
+Traditional projects with broader ML capabilities but limited agent features.
+
+<Warning>
+  New agent features are only available on Foundry projects. Consider migrating from hub-based projects for access to the Foundry Agent Service GA.
+</Warning>
+
+**Feature Comparison:**
+
+| Capability | Foundry Project | Hub Project |
+|------------|----------------|-------------|
+| Agents | ✅ GA | ⚠️ Preview only |
+| Azure OpenAI, DeepSeek, xAI | ✅ Direct | Via connections |
+| Marketplace models | ✅ Direct | Via connections |
+| Managed compute models | ❌ | ✅ |
+| Foundry SDK/API | ✅ Full | Limited |
+| Prompt flow | ❌ | ✅ |
+
+## Microsoft Foundry API and SDKs
+
+The Microsoft Foundry API is designed specifically for building agentic applications and provides a consistent contract across model providers.
+
+### Available SDKs
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install azure-ai-projects
+    ```
+    
+    ```python
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import DefaultAzureCredential
+    
+    client = AIProjectClient(
+        credential=DefaultAzureCredential(),
+        subscription_id="your-sub-id",
+        resource_group_name="your-rg",
+        project_name="your-project"
+    )
+    ```
+  </Tab>
+  
+  <Tab title="C#">
+    ```bash
+    dotnet add package Azure.AI.Projects
+    ```
+    
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    
+    var client = new AIProjectClient(
+        new Uri("your-endpoint"),
+        new DefaultAzureCredential()
+    );
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```bash
+    npm install @azure/ai-projects
+    ```
+    
+    ```typescript
+    import { AIProjectClient } from '@azure/ai-projects';
+    import { DefaultAzureCredential } from '@azure/identity';
+    
+    const client = new AIProjectClient(
+      endpoint,
+      new DefaultAzureCredential()
+    );
+    ```
+  </Tab>
+  
+  <Tab title="Java">
+    ```xml
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-projects</artifactId>
+    </dependency>
+    ```
+    
+    ```java
+    import com.azure.ai.projects.AIProjectClient;
+    import com.azure.identity.DefaultAzureCredentialBuilder;
+    
+    AIProjectClient client = new AIProjectClientBuilder()
+        .credential(new DefaultAzureCredentialBuilder().build())
+        .endpoint(endpoint)
+        .buildClient();
+    ```
+  </Tab>
+</Tabs>
+
+### REST API
+
+Access the full Foundry API via REST:
+
+```bash
+curl -X POST https://your-endpoint.openai.azure.com/openai/threads/runs \
+  -H "api-key: $FOUNDRY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assistant_id": "asst_abc123",
+    "thread": {
+      "messages": [
+        {"role": "user", "content": "Hello, how can you help me?"}
+      ]
+    }
+  }'
+```
+
+## Model Catalog
+
+Access a wide variety of models from multiple providers:
+
+### Azure Models (Direct Access)
+
+- **Azure OpenAI**: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo, GPT-4o
+- **DeepSeek**: DeepSeek-V2, DeepSeek-Coder
+- **xAI**: Grok models
+
+### Marketplace Models
+
+- **Meta**: Llama 3, Llama 2
+- **Mistral AI**: Mistral Large, Mistral Medium
+- **Cohere**: Command, Embed
+- **Stability AI**: Stable Diffusion models
+- **HuggingFace**: Various open-source models
+
+### Model Router
+
+Automatically route requests to the best available model:
+
+```python
+from azure.ai.projects.models import ModelRouter
+
+router = ModelRouter(
+    models=["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+    strategy="cost_optimized",  # or "performance_optimized"
+    fallback=True
+)
+
+agent = client.agents.create(
+    model_router=router,
+    instructions="You are a helpful assistant."
+)
+```
+
+## Deployment Options
+
+Publish your agents to multiple platforms:
+
+<CardGroup cols={2}>
+  <Card title="Microsoft 365" icon="microsoft">
+    Integrate with Teams, Outlook, and other M365 apps
+  </Card>
+  
+  <Card title="Teams" icon="users">
+    Deploy as Teams bots for enterprise collaboration
+  </Card>
+  
+  <Card title="BizChat" icon="comments">
+    Connect to business chat platforms
+  </Card>
+  
+  <Card title="Containers" icon="docker">
+    Containerized deployments for portability
+  </Card>
+</CardGroup>
+
+## Enterprise Features
+
+### Centralized AI Asset Management
+
+Observe, optimize, and manage 100% of your AI assets in the **Operate** section:
+
+- Register agents from other clouds
+- Get alerts when agents or models require attention
+- Manage AI fleet health as it scales
+- Track usage and costs across all assets
+
+### Enhanced Enterprise Support
+
+<Tabs>
+  <Tab title="Security">
+    - Microsoft Entra ID authentication
+    - Azure Key Vault integration
+    - Virtual network support
+    - Private endpoints
+    - Managed identities
+  </Tab>
+  
+  <Tab title="Compliance">
+    - Azure Policy integration
+    - Audit logging
+    - Data residency controls
+    - Compliance certifications
+    - Responsible AI guidelines
+  </Tab>
+  
+  <Tab title="Integration">
+    - AI gateway integration
+    - Open protocols (MCP, A2A)
+    - Full authentication support
+    - Azure service connectors
+    - Third-party integrations
+  </Tab>
+</Tabs>
+
+## Getting Started
+
+<Steps>
+  <Step title="Create a Foundry Resource">
+    Sign in to the [Microsoft Foundry portal](https://ai.azure.com) and create a new workspace.
+  </Step>
+  
+  <Step title="Create Your First Agent">
+    Use the portal or SDK to create an agent with custom instructions and tools.
+  </Step>
+  
+  <Step title="Test and Iterate">
+    Use the playground to test your agent and refine its behavior.
+  </Step>
+  
+  <Step title="Deploy to Production">
+    Publish your agent to your chosen platform with monitoring enabled.
+  </Step>
+</Steps>
+
+## Quickstart Example
+
+Create and run an agent in minutes:
+
+```python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+# Initialize
+credential = DefaultAzureCredential()
+client = AIProjectClient(
+    credential=credential,
+    subscription_id="your-subscription-id",
+    resource_group_name="your-resource-group",
+    project_name="your-project"
+)
+
+# Create agent
+agent = client.agents.create(
+    model="gpt-4",
+    name="customer-support",
+    instructions="""You are a helpful customer support agent.
+    Be friendly, concise, and always cite sources when providing information.""",
+    tools=[{"type": "code_interpreter"}, {"type": "file_search"}]
+)
+
+# Create conversation thread
+thread = client.agents.create_thread()
+
+# Send message
+message = client.agents.create_message(
+    thread_id=thread.id,
+    role="user",
+    content="How do I reset my password?"
+)
+
+# Run agent
+run = client.agents.create_run(
+    thread_id=thread.id,
+    agent_id=agent.id
+)
+
+# Wait for completion
+run = client.agents.wait_for_run(thread.id, run.id)
+
+# Get response
+messages = client.agents.list_messages(thread.id)
+for msg in messages:
+    if msg.role == "assistant":
+        print(msg.content)
+```
+
+## Pricing
+
+Microsoft Foundry pricing is based on the underlying products you consume:
+
+- **Platform**: Free to use and explore
+- **Models**: Pay per token (varies by model)
+- **Compute**: Pay for VM/GPU hours when used
+- **Storage**: Standard Azure Storage pricing
+- **Tools**: Some tools may have additional costs
+
+<Tip>
+  The platform itself is free - you only pay at deployment level for the resources you actually use.
+</Tip>
+
+## Region Availability
+
+Foundry is available in most regions where Foundry Tools are available. For agentic features, check the [region support documentation](https://learn.microsoft.com/azure/ai-services/language-support) for availability.
+
+**Recommended Regions:**
+- East US
+- West Europe
+- Southeast Asia
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started with your first agent
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="https://learn.microsoft.com/rest/api/aifoundry/">
+    Complete API documentation
+  </Card>
+  
+  <Card title="VS Code Extension" icon="window">
+    Develop agents in your IDE
+  </Card>
+  
+  <Card title="GitHub Samples" icon="github">
+    Browse code examples
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Create a Foundry project](/tutorials/create-project)
+- [Build your first agent](/tutorials/first-agent)
+- [Explore the tool catalog](/reference/tools)
+- [Learn about workflows](/concepts/workflows)
+- [Set up monitoring](/how-to/monitoring)

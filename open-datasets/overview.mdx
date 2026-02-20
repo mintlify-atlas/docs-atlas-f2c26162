@@ -1,0 +1,113 @@
+---
+title: Azure Open Datasets Overview
+description: Learn about Azure Open Datasets - curated public datasets that you can use to enrich your machine learning solutions for more accurate models.
+---
+
+# What are Azure Open Datasets?
+
+[Azure Open Datasets](https://azure.microsoft.com/services/open-datasets/) are curated public datasets that you can add to scenario-specific features to machine learning solutions, for more accurate models. Open Datasets are available in the cloud, on Microsoft Azure. They're integrated into Azure Machine Learning and readily available to Azure Databricks. You can also access the datasets through APIs and use them in other products, such as Power BI and Azure Data Factory.
+
+Datasets include public-domain data for weather, census, holidays, public safety, and location that help you train machine learning models and enrich predictive solutions. You can also share your public datasets through Azure Open Datasets.
+
+## Curated and Prepared Datasets
+
+Curated open public datasets in Azure Open Datasets are optimized for consumption in machine learning workflows.
+
+Data scientists often spend most of their time cleaning and preparing data for advanced analytics. To save you time, Open Datasets are copied to the Azure cloud, and then preprocessed. At regular intervals, data is pulled from the sources - for example, by an FTP connection to the National Oceanic and Atmospheric Administration (NOAA). Next, the data is parsed into a structured format, and then enriched as needed, with features such as ZIP Code or the locations of the nearest weather stations.
+
+Datasets are cohosted with cloud compute in Azure, to make access and manipulation easier.
+
+## Available Dataset Categories
+
+### Transportation
+
+Taxi trip records from New York City, including yellow and green taxi data with pickup/drop-off times, locations, distances, fares, and passenger counts.
+
+### Health and Genomics
+
+COVID-19 datasets tracking cases, deaths, and recoveries worldwide, plus genomics datasets including 1000 Genomes, gnomAD, and ClinVar for genetic variation research.
+
+### Labor and Economics
+
+US labor statistics, employment data, consumer price index, and producer price index datasets for economic analysis and forecasting.
+
+### Population and Safety
+
+US population data by county and ZIP code, plus 311 safety data from major cities including Boston, Chicago, New York, San Francisco, and Seattle.
+
+### Supplemental Datasets
+
+Common datasets for machine learning including MNIST handwritten digits, Diabetes dataset, public holidays data covering 38 countries, and simulated sales data.
+
+## Access Methods
+
+With an Azure account, you can access open datasets through code or through the Azure service interface. The data is colocated with Azure cloud compute resources for use in your machine learning solutions.
+
+### Python SDK
+
+Access datasets programmatically using the `azureml-opendatasets` Python package:
+
+```python
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_pandas_dataframe()
+```
+
+### Azure Machine Learning
+
+Open Datasets are available through the Azure Machine Learning UI and SDK. You can create datasets from Open Datasets and use them in your ML experiments.
+
+### Azure Databricks
+
+Access datasets in Azure Databricks notebooks using the Python SDK or direct access to Azure Blob Storage.
+
+### Direct Access
+
+You don't need an Azure account to access Open Datasets - you can access them from any Python environment with or without Spark.
+
+## Benefits
+
+<Card title="No Extra Storage Cost" icon="database">
+  Datasets are lazily evaluated and data remains in its existing location
+</Card>
+
+<Card title="Improved Performance" icon="bolt">
+  ML workflow performance speeds are optimized through data cohosting
+</Card>
+
+<Card title="Data Integrity" icon="shield-check">
+  No risk of unintentionally changing your original data sources
+</Card>
+
+<Card title="Regular Updates" icon="arrows-rotate">
+  Datasets are updated at regular intervals from trusted sources
+</Card>
+
+## Request or Contribute Datasets
+
+If you can't find the data you want, you can:
+
+- **Request a dataset**: Email [aod@microsoft.com](mailto:aod@microsoft.com?Subject=Request%20dataset) with details about the dataset you need
+- **Contribute a dataset**: Share your public datasets by emailing [aod@microsoft.com](mailto:aod@microsoft.com?Subject=Contribute%20dataset)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Browse Catalog" icon="book" href="/open-datasets/catalog">
+    Explore all available datasets in the catalog
+  </Card>
+  <Card title="Create Dataset" icon="plus" href="/open-datasets/how-to/create-dataset">
+    Learn how to create datasets from Open Datasets
+  </Card>
+  <Card title="Public Holidays" icon="calendar" href="/open-datasets/datasets/public-holidays">
+    View the Public Holidays dataset
+  </Card>
+  <Card title="Python SDK Reference" icon="code" href="https://learn.microsoft.com/python/api/azureml-opendatasets/azureml.opendatasets">
+    View the Python SDK documentation
+  </Card>
+</CardGroup>

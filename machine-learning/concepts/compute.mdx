@@ -1,0 +1,429 @@
+---
+title: Compute Targets in Azure Machine Learning
+description: Learn about compute targets for training and deployment in Azure Machine Learning, including compute clusters, instances, and serverless options.
+---
+
+# What are Compute Targets in Azure Machine Learning?
+
+A **compute target** is a designated compute resource or environment where you run your training script or host your service deployment. Using compute targets makes it easy to change your compute environment without modifying your code.
+
+<Info>
+Compute targets provide scalable, managed compute resources for machine learning workloads, from development to production deployment.
+</Info>
+
+## Compute Lifecycle
+
+In a typical model development lifecycle:
+
+<Steps>
+  <Step title="Local Development">
+    Start with local environment or cloud-based VM for experimentation
+  </Step>
+  <Step title="Scaled Training">
+    Move to compute clusters for larger datasets and distributed training
+  </Step>
+  <Step title="Production Deployment">
+    Deploy models to inference endpoints with dedicated compute
+  </Step>
+</Steps>
+
+## Training Compute Targets
+
+Compute targets for model training can be reused across multiple training jobs.
+
+### Azure Machine Learning Compute Options
+
+<Tabs>
+  <Tab title="Compute Cluster">
+    **Managed multinode clusters** for scalable training
+    
+    **Features:**
+    - Single-node or multinode clusters
+    - Autoscales based on job submission
+    - Automatic cluster management and job scheduling
+    - Supports CPU and GPU resources
+    
+    **Use Cases:**
+    - Distributed training
+    - Large dataset processing
+    - Hyperparameter tuning
+    - AutoML experiments
+    
+    ```python
+    from azure.ai.ml.entities import AmlCompute
+    
+    cluster = AmlCompute(
+        name="cpu-cluster",
+        type="amlcompute",
+        size="STANDARD_DS3_v2",
+        min_instances=0,
+        max_instances=4,
+        idle_time_before_scale_down=120,
+        tier="Dedicated"
+    )
+    ml_client.compute.begin_create_or_update(cluster)
+    ```
+  </Tab>
+  
+  <Tab title="Compute Instance">
+    **Fully managed development workstation** in the cloud
+    
+    **Features:**
+    - Preconfigured with ML frameworks
+    - Jupyter, JupyterLab, and VS Code integration
+    - SSH access for development
+    - Similar to a cloud-based virtual machine
+    
+    **Use Cases:**
+    - Interactive development
+    - Notebook authoring
+    - Small-scale training
+    - Testing and debugging
+    
+    ```python
+    from azure.ai.ml.entities import ComputeInstance
+    
+    instance = ComputeInstance(
+        name="my-compute-instance",
+        size="STANDARD_DS3_v2",
+        idle_time_before_shutdown=30
+    )
+    ml_client.compute.begin_create_or_update(instance)
+    ```
+  </Tab>
+  
+  <Tab title="Serverless Compute">
+    **On-demand compute** without infrastructure management
+    
+    **Features:**
+    - No cluster creation needed
+    - Automatic lifecycle management
+    - Access compute on the fly
+    - Fully managed by Azure ML
+    
+    **Use Cases:**
+    - Quick job submission
+    - Eliminating quota management
+    - Pay-per-use scenarios
+    
+    <Note>
+    Serverless compute requires no configuration - just submit jobs and Azure ML handles the rest.
+    </Note>
+  </Tab>
+  
+  <Tab title="Attached Compute">
+    **Bring your own compute** resources
+    
+    **Supported:**
+    - Remote VMs
+    - Azure Databricks
+    - Azure HDInsight
+    - Azure Data Lake Analytics
+    - Azure Kubernetes Service
+    
+    **Use Cases:**
+    - Existing infrastructure
+    - Specialized hardware
+    - On-premises compute
+  </Tab>
+</Tabs>
+
+### Training Compute Compatibility
+
+| Compute Type | AutoML | ML Pipelines | Designer |
+|--------------|--------|--------------|----------|
+| Compute Cluster | ✓ | ✓ | ✓ |
+| Serverless Compute | ✓ | ✓ | ✓ |
+| Compute Instance | ✓ (via SDK) | ✓ | ✓ |
+| Kubernetes | - | ✓ | ✓ |
+| Remote VM | ✓ | ✓ | - |
+| Apache Spark | ✓ (SDK local) | ✓ | - |
+| Databricks | ✓ (SDK local) | ✓ | - |
+
+## Inference Compute Targets
+
+Compute for hosting deployed models and performing inference.
+
+### Deployment Options
+
+<CardGroup cols={2}>
+  <Card title="Managed Online Endpoints" icon="bolt">
+    **Real-time inference** with serverless compute
+    - Automatic scaling
+    - Fully managed infrastructure
+    - Built-in monitoring
+    - No quota consumption
+  </Card>
+  
+  <Card title="Batch Endpoints" icon="layer-group">
+    **Batch scoring** for large datasets
+    - Process files in parallel
+    - Scheduled or on-demand
+    - Cost-effective for bulk inference
+    - Automatic compute management
+  </Card>
+  
+  <Card title="Kubernetes Endpoints" icon="dharmachakra">
+    **On-premises or cloud** Kubernetes clusters
+    - Run anywhere (cloud, edge, on-prem)
+    - Full infrastructure control
+    - GPU support
+    - Custom networking
+  </Card>
+  
+  <Card title="Azure Container Instances" icon="box">
+    **Development/testing** only
+    - Quick deployment
+    - No cluster management
+    - Limited to &lt;48GB RAM
+    - Small models (&lt;1GB)
+  </Card>
+</CardGroup>
+
+### Choosing Deployment Compute
+
+<Tabs>
+  <Tab title="Real-Time (Low Latency)">
+    Use **Managed Online Endpoints** when:
+    - Response time is critical (&lt;1 second)
+    - Request-response pattern
+    - Small payloads (fits in HTTP request)
+    - Need to scale on traffic
+  </Tab>
+  
+  <Tab title="Batch Processing">
+    Use **Batch Endpoints** when:
+    - Processing large files or datasets
+    - Can tolerate longer processing times
+    - Data stored in Azure Storage
+    - Need cost optimization
+  </Tab>
+  
+  <Tab title="Kubernetes">
+    Use **Kubernetes Endpoints** when:
+    - Need on-premises deployment
+    - Edge computing scenarios
+    - Existing Kubernetes infrastructure
+    - Custom networking requirements
+  </Tab>
+</Tabs>
+
+## Supported VM Series and Sizes
+
+Azure Machine Learning supports select VM series for compute:
+
+### General Purpose VMs
+
+| Series | Use Case | Compute Support |
+|--------|----------|----------------|
+| Dv3/DSv3 | Balanced CPU-memory | Clusters & Instances |
+| Dv2/DSv2 | General workloads | Clusters & Instances |
+| DDSv4 | Memory optimized | Clusters & Instances |
+
+### GPU-Accelerated VMs
+
+| Series | GPU Architecture | CUDA Version | Use Case |
+|--------|------------------|--------------|----------|
+| ND-H100-v5 | H100 | 11.0+ | Large-scale training |
+| ND-H200-v5 | H200 | 11.0+ | AI supercomputing |
+| NDasrA100_v4 | Ampere (A100) | 11.0+ | Deep learning |
+| NCasT4_v3 | Turing (T4) | 10.0+ | Inference & training |
+| NCv3 | Volta (V100) | 9.0+ | Training |
+| NDv2 | Volta (V100) | 9.0+ | Distributed training |
+
+### High Performance Compute
+
+| Series | Capabilities | Compute Support |
+|--------|--------------|----------------|
+| HBv3 | AMD EPYC | Clusters & Instances |
+| HBv2 | AMD EPYC | Clusters & Instances |
+| HC | Intel Xeon | Clusters & Instances |
+
+<Warning>
+**CUDA Compatibility**
+
+Ensure your CUDA version is compatible with:
+1. GPU architecture
+2. ML framework version (PyTorch, TensorFlow)
+
+For PyTorch: Check [compatibility matrix](https://pytorch.org/get-started/previous-versions/)
+</Warning>
+
+## Creating Compute Resources
+
+<CodeGroup>
+```python Python SDK
+from azure.ai.ml import MLClient
+from azure.ai.ml.entities import AmlCompute
+from azure.identity import DefaultAzureCredential
+
+ml_client = MLClient(
+    DefaultAzureCredential(),
+    subscription_id="<subscription-id>",
+    resource_group="<resource-group>",
+    workspace_name="<workspace>"
+)
+
+# Create compute cluster
+cluster = AmlCompute(
+    name="gpu-cluster",
+    type="amlcompute",
+    size="STANDARD_NC6",
+    min_instances=0,
+    max_instances=4,
+    idle_time_before_scale_down=300,
+    tier="Dedicated"
+)
+
+ml_client.compute.begin_create_or_update(cluster).result()
+```
+
+```bash Azure CLI
+# Create compute cluster
+az ml compute create \
+  --name gpu-cluster \
+  --type amlcompute \
+  --size STANDARD_NC6 \
+  --min-instances 0 \
+  --max-instances 4 \
+  --idle-time-before-scale-down 300 \
+  --resource-group <rg> \
+  --workspace-name <workspace>
+```
+
+```yaml YAML Config
+$schema: https://azuremlschemas.azureedge.net/latest/amlCompute.schema.json
+name: gpu-cluster
+type: amlcompute
+size: STANDARD_NC6
+min_instances: 0
+max_instances: 4
+idle_time_before_scale_down: 300
+tier: dedicated
+```
+</CodeGroup>
+
+## Cost Optimization
+
+<AccordionGroup>
+  <Accordion title="Minimize Idle Costs">
+    **For Compute Clusters:**
+    - Set `min_instances: 0` to scale down when idle
+    - Configure `idle_time_before_scale_down` (seconds)
+    - Use low-priority VMs for non-critical workloads
+    
+    **For Compute Instances:**
+    - Enable idle shutdown after period of inactivity
+    - Stop instances when not in use
+    - Use schedules to auto-start/stop
+    
+    ```python
+    instance = ComputeInstance(
+        name="dev-instance",
+        size="STANDARD_DS3_v2",
+        idle_time_before_shutdown_minutes=30,
+        schedules=[
+            ComputeStartStopSchedule(
+                trigger=RecurrenceTrigger(
+                    frequency="day",
+                    interval=1,
+                    schedule=RecurrencePattern(
+                        hours=[9],
+                        minutes=[0]
+                    )
+                ),
+                action="start"
+            )
+        ]
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Serverless Compute">
+    Benefits:
+    - No quota management
+    - Automatic scaling to zero
+    - Pay only for actual usage
+    - No idle compute costs
+    
+    <Note>
+    Serverless compute is billed per second of actual compute time.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="Select Appropriate VM Sizes">
+    **Scale Up Strategy:**
+    1. Start with 150% of required RAM
+    2. Profile performance
+    3. Adjust size based on metrics
+    
+    **Then Scale Out:**
+    - Increase instance count for throughput
+    - Use autoscaling for variable loads
+  </Accordion>
+  
+  <Accordion title="Use Spot VMs">
+    For fault-tolerant workloads:
+    ```python
+    cluster = AmlCompute(
+        name="spot-cluster",
+        size="STANDARD_DS3_v2",
+        tier="LowPriority",  # Spot pricing
+        min_instances=0,
+        max_instances=10
+    )
+    ```
+    
+    **Savings:** Up to 80% vs dedicated VMs
+    
+    **Trade-off:** Can be evicted when Azure needs capacity
+  </Accordion>
+</AccordionGroup>
+
+## Compute Isolation
+
+Isolated VM sizes dedicated to a single customer:
+
+- `Standard_M128ms` - Memory optimized
+- `Standard_F72s_v2` - Compute optimized  
+- `Standard_NC24s_v3` - GPU accelerated
+- `Standard_NC24rs_v3` - RDMA capable GPU
+
+<Note>
+Use isolated compute for compliance and regulatory requirements requiring physical isolation.
+</Note>
+
+## Monitoring Compute Usage
+
+Track compute metrics in Azure ML studio:
+
+- **Node allocation**: Current vs max instances
+- **Job queue**: Pending jobs waiting for compute
+- **Run duration**: Time spent on compute
+- **Resource utilization**: CPU, GPU, memory usage
+
+```python
+# Get compute details
+compute = ml_client.compute.get("my-cluster")
+
+print(f"Provisioning state: {compute.provisioning_state}")
+print(f"Current nodes: {compute.current_node_count}")
+print(f"Target nodes: {compute.target_node_count}")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Compute Instance" icon="laptop">
+    Set up your development environment
+  </Card>
+  <Card title="Distributed Training" icon="network-wired" href="/machine-learning/training/distributed-training">
+    Scale training across multiple GPUs
+  </Card>
+  <Card title="Deploy Models" icon="rocket" href="/machine-learning/deployment/overview">
+    Deploy to inference endpoints
+  </Card>
+  <Card title="Manage Quotas" icon="gauge">
+    Request and manage compute quotas
+  </Card>
+</CardGroup>

@@ -1,0 +1,530 @@
+---
+title: '.NET SDK'
+description: 'Complete .NET SDK reference for Azure AI Foundry and Azure AI services'
+---
+
+# .NET SDK Overview
+
+The .NET SDKs provide comprehensive access to Azure AI services including Foundry Local, Azure Machine Learning, and Azure AI Search. This guide covers installation, authentication, and usage examples for C#.
+
+## Installation
+
+### Azure AI Foundry SDK
+
+<CodeGroup>
+```bash Foundry (Preview)
+dotnet add package Azure.AI.Projects --prerelease
+dotnet add package Azure.AI.Projects.OpenAI --prerelease
+dotnet add package Azure.Identity
+```
+
+```bash Foundry Classic (Stable)
+dotnet add package Azure.Identity
+dotnet add package Azure.AI.Projects
+dotnet add package Azure.AI.Agents.Persistent
+dotnet add package Azure.AI.Inference
+```
+</CodeGroup>
+
+### Foundry Local SDK
+
+<Tabs>
+  <Tab title="Windows (WinML)">
+    ```bash
+    dotnet add package Microsoft.AI.Foundry.Local.WinML
+    ```
+  </Tab>
+  <Tab title="Cross-Platform">
+    ```bash
+    dotnet add package Microsoft.AI.Foundry.Local
+    ```
+  </Tab>
+</Tabs>
+
+### Azure AI Search
+
+```bash
+dotnet add package Azure.Search.Documents
+dotnet add package Azure.Identity
+```
+
+### Azure Machine Learning
+
+```bash
+dotnet add package Azure.AI.MachineLearning
+dotnet add package Azure.Identity
+```
+
+## Authentication
+
+All SDKs support Azure Active Directory authentication:
+
+```csharp
+using Azure.Identity;
+
+var credential = new DefaultAzureCredential();
+```
+
+<Note>
+Ensure you're authenticated with Azure CLI: `az login`
+</Note>
+
+## Azure AI Foundry
+
+### Project Client
+
+Connect to your Azure AI Foundry project:
+
+```csharp
+using Azure.AI.Projects.OpenAI;
+using Azure.Identity;
+
+string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+
+AIProjectClient projectClient = new(
+    endpoint: new Uri(endpoint),
+    tokenProvider: new DefaultAzureCredential()
+);
+```
+
+### Chat Completions
+
+Use the OpenAI-compatible client:
+
+```csharp
+using OpenAI.Responses;
+
+#pragma warning disable OPENAI001
+
+OpenAIResponseClient responseClient = projectClient.OpenAI.GetProjectResponsesClientForModel("gpt-5.2");
+
+OpenAIResponse response = responseClient.CreateResponse("What is the speed of light?");
+
+Console.WriteLine(response.GetOutputText());
+
+#pragma warning restore OPENAI001
+```
+
+### Streaming Responses
+
+```csharp
+using OpenAI.Responses;
+using System;
+
+var responseClient = projectClient.OpenAI.GetProjectResponsesClientForModel("gpt-5.2");
+
+var streamingResponse = responseClient.CreateResponseStreaming(
+    "Explain quantum computing in simple terms"
+);
+
+await foreach (var chunk in streamingResponse)
+{
+    Console.Write(chunk.ContentUpdate);
+}
+```
+
+### Get Project Connections
+
+```csharp
+var connections = projectClient.GetConnections();
+
+foreach (var connection in connections)
+{
+    Console.WriteLine($"Connection: {connection.Name}");
+    Console.WriteLine($"Type: {connection.ConnectionType}");
+}
+```
+
+## Foundry Local
+
+### Initialize Manager
+
+```csharp
+using Microsoft.AI.Foundry.Local;
+using Microsoft.Extensions.Logging;
+
+var config = new Configuration
+{
+    AppName = "my-app",
+    LogLevel = Microsoft.AI.Foundry.Local.LogLevel.Information,
+    ModelCacheDir = "./models"
+};
+
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
+});
+
+var logger = loggerFactory.CreateLogger<Program>();
+
+await FoundryLocalManager.CreateAsync(config, logger);
+var manager = FoundryLocalManager.Instance;
+```
+
+### List and Download Models
+
+```csharp
+// Get catalog
+var catalog = await manager.GetCatalogAsync();
+
+// List available models
+var models = await catalog.ListModelsAsync();
+Console.WriteLine($"Available models: {models.Count()}");
+
+// Get specific model
+var model = await catalog.GetModelAsync(alias: "qwen2.5-0.5b");
+
+if (model != null)
+{
+    Console.WriteLine($"Model: {model.DisplayName}");
+    Console.WriteLine($"Size: {model.FileSizeMb} MB");
+    
+    // Download model
+    await model.DownloadAsync();
+    
+    // Load into memory
+    await model.LoadAsync();
+    
+    Console.WriteLine($"Model loaded: {model.SelectedVariant.Name}");
+}
+```
+
+### Model Management
+
+```csharp
+// List cached models
+var cachedModels = await catalog.GetCachedModelsAsync();
+foreach (var cachedModel in cachedModels)
+{
+    Console.WriteLine($"Cached: {cachedModel.Alias}");
+}
+
+// List loaded models
+var loadedModels = await catalog.GetLoadedModelsAsync();
+foreach (var loadedModel in loadedModels)
+{
+    Console.WriteLine($"Loaded: {loadedModel.DisplayName}");
+}
+
+// Unload model
+if (model != null)
+{
+    await model.UnloadAsync();
+}
+```
+
+### Native Chat Completions
+
+```csharp
+using Microsoft.AI.Foundry.Local;
+
+// Load model
+var model = await catalog.GetModelAsync(alias: "qwen2.5-0.5b");
+await model.LoadAsync();
+
+// Get model path for inference
+var modelPath = await model.GetPathAsync();
+
+// Use model with native API (implementation varies by model type)
+Console.WriteLine($"Model ready at: {modelPath}");
+```
+
+### Start Web Server (Optional)
+
+```csharp
+// Start REST API server
+await manager.StartWebServerAsync();
+
+Console.WriteLine($"Server running at: {config.Web.Urls}");
+
+// Stop server when done
+await manager.StopWebServerAsync();
+```
+
+## Azure AI Search
+
+### Search Client
+
+```csharp
+using Azure.Search.Documents;
+using Azure.Identity;
+using System;
+
+Uri endpoint = new Uri("https://<search-service>.search.windows.net");
+string indexName = "your-index";
+
+SearchClient searchClient = new SearchClient(
+    endpoint,
+    indexName,
+    new DefaultAzureCredential()
+);
+```
+
+### Full-Text Search
+
+```csharp
+using Azure.Search.Documents.Models;
+
+SearchOptions options = new SearchOptions
+{
+    Size = 5,
+    Select = { "id", "page_chunk", "page_number" }
+};
+
+SearchResults<SearchDocument> response = await searchClient.SearchAsync<SearchDocument>(
+    "Phoenix urban development",
+    options
+);
+
+await foreach (SearchResult<SearchDocument> result in response.GetResultsAsync())
+{
+    Console.WriteLine($"Score: {result.Score}");
+    Console.WriteLine($"Content: {result.Document["page_chunk"]}");
+    Console.WriteLine($"Page: {result.Document["page_number"]}\n");
+}
+```
+
+### Vector Search
+
+```csharp
+using Azure.Search.Documents.Models;
+using System.Collections.Generic;
+
+// Generate embedding (using your embedding function)
+float[] queryVector = GenerateEmbedding("Phoenix metropolitan area");
+
+VectorizedQuery vectorQuery = new VectorizedQuery(queryVector)
+{
+    KNearestNeighborsCount = 5,
+    Fields = { "page_embedding_text_3_large" }
+};
+
+SearchOptions options = new SearchOptions
+{
+    VectorSearch = new VectorSearchOptions
+    {
+        Queries = { vectorQuery }
+    },
+    Select = { "id", "page_chunk", "page_number" }
+};
+
+SearchResults<SearchDocument> response = await searchClient.SearchAsync<SearchDocument>(
+    null,
+    options
+);
+
+await foreach (SearchResult<SearchDocument> result in response.GetResultsAsync())
+{
+    Console.WriteLine($"Content: {result.Document["page_chunk"]}");
+}
+```
+
+### Upload Documents
+
+```csharp
+using Azure.Search.Documents.Models;
+using System.Collections.Generic;
+
+var documents = new[]
+{
+    new SearchDocument
+    {
+        ["id"] = "doc1",
+        ["page_chunk"] = "Phoenix is a major city in Arizona.",
+        ["page_number"] = 104
+    },
+    new SearchDocument
+    {
+        ["id"] = "doc2",
+        ["page_chunk"] = "The Phoenix metropolitan area includes Glendale.",
+        ["page_number"] = 105
+    }
+};
+
+IndexDocumentsResult result = await searchClient.IndexDocumentsAsync(
+    IndexDocumentsBatch.Upload(documents)
+);
+
+Console.WriteLine($"Uploaded {result.Results.Count} documents");
+```
+
+## Azure Machine Learning
+
+### Workspace Client
+
+```csharp
+using Azure.AI.MachineLearning;
+using Azure.Identity;
+using System;
+
+Uri endpoint = new Uri("https://<workspace>.api.azureml.ms");
+string subscriptionId = "your-subscription-id";
+string resourceGroup = "your-resource-group";
+string workspace = "your-workspace";
+
+var credential = new DefaultAzureCredential();
+
+// Note: Specific client implementation varies
+Console.WriteLine($"Connected to workspace: {workspace}");
+```
+
+## Azure AI Services
+
+### Speech Recognition
+
+```csharp
+using Microsoft.CognitiveServices.Speech;
+using System;
+using System.Threading.Tasks;
+
+var config = SpeechConfig.FromSubscription("your-key", "your-region");
+using var audioConfig = AudioConfig.FromWavFileInput("audio.wav");
+using var recognizer = new SpeechRecognizer(config, audioConfig);
+
+var result = await recognizer.RecognizeOnceAsync();
+
+if (result.Reason == ResultReason.RecognizedSpeech)
+{
+    Console.WriteLine($"Recognized: {result.Text}");
+}
+else
+{
+    Console.WriteLine($"Recognition failed: {result.Reason}");
+}
+```
+
+### Speech Synthesis
+
+```csharp
+var config = SpeechConfig.FromSubscription("your-key", "your-region");
+config.SpeechSynthesisVoiceName = "en-US-AriaNeural";
+
+using var synthesizer = new SpeechSynthesizer(config);
+var result = await synthesizer.SpeakTextAsync("Hello, world!");
+
+if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+{
+    Console.WriteLine("Speech synthesized successfully");
+}
+```
+
+### Content Safety
+
+```csharp
+using Azure.AI.ContentSafety;
+using Azure.Identity;
+
+Uri endpoint = new Uri("https://<resource>.cognitiveservices.azure.com");
+
+ContentSafetyClient client = new ContentSafetyClient(
+    endpoint,
+    new DefaultAzureCredential()
+);
+
+var request = new AnalyzeTextOptions("Sample text to analyze");
+var response = await client.AnalyzeTextAsync(request);
+
+Console.WriteLine($"Hate: {response.Value.HateResult.Severity}");
+Console.WriteLine($"Violence: {response.Value.ViolenceResult.Severity}");
+```
+
+## Error Handling
+
+```csharp
+using Azure;
+using System;
+
+try
+{
+    var results = await searchClient.SearchAsync<SearchDocument>("query");
+}
+catch (RequestFailedException ex) when (ex.Status == 404)
+{
+    Console.WriteLine("Index not found");
+}
+catch (RequestFailedException ex)
+{
+    Console.WriteLine($"Error: {ex.Status} - {ex.Message}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Unexpected error: {ex.Message}");
+}
+```
+
+## Async Best Practices
+
+<Accordion title="Use ConfigureAwait(false)">
+  In library code, use `ConfigureAwait(false)` to avoid deadlocks:
+  
+  ```csharp
+  var result = await client.SearchAsync("query").ConfigureAwait(false);
+  ```
+</Accordion>
+
+<Accordion title="Dispose Resources">
+  Use `using` statements or `IDisposable` pattern:
+  
+  ```csharp
+  using var client = new SearchClient(endpoint, indexName, credential);
+  // Client is automatically disposed
+  ```
+</Accordion>
+
+<Accordion title="Cancellation Tokens">
+  Support cancellation for long-running operations:
+  
+  ```csharp
+  using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+  var results = await client.SearchAsync("query", cancellationToken: cts.Token);
+  ```
+</Accordion>
+
+## Reduce Application Size
+
+For Foundry Local, exclude large execution provider libraries:
+
+```xml
+<!-- ExcludeExtraLibs.props -->
+<Project>
+  <!-- Remove CUDA EP on Windows x64 -->
+  <Target Name="ExcludeCudaLibs" Condition="'$(RuntimeIdentifier)'=='win-x64'" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"
+        Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '^onnxruntime.*cuda.*', RegexOptions.IgnoreCase))" />
+    </ItemGroup>
+  </Target>
+</Project>
+```
+
+Import in your `.csproj`:
+
+```xml
+<Import Project="ExcludeExtraLibs.props" />
+```
+
+## Package References
+
+| Package | NuGet | Documentation |
+|---------|-------|---------------|
+| Azure.AI.Projects | [Link](https://www.nuget.org/packages/Azure.AI.Projects) | [Docs](/dotnet/api/overview/azure/ai.projects-readme) |
+| Microsoft.AI.Foundry.Local | [Link](https://www.nuget.org/packages/Microsoft.AI.Foundry.Local) | [Docs](https://aka.ms/fl-csharp-api-ref) |
+| Azure.Search.Documents | [Link](https://www.nuget.org/packages/Azure.Search.Documents) | [Docs](/dotnet/api/overview/azure/search.documents-readme) |
+| Microsoft.CognitiveServices.Speech | [Link](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) | [Docs](/dotnet/api/microsoft.cognitiveservices.speech) |
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="code" href="/api/foundry">
+    Foundry REST API reference
+  </Card>
+  <Card title="Python SDK" icon="python" href="/sdk/python">
+    Python SDK documentation
+  </Card>
+  <Card title="JavaScript SDK" icon="js" href="/sdk/javascript">
+    JavaScript and TypeScript SDK
+  </Card>
+  <Card title="Samples" icon="github" href="https://aka.ms/foundrylocalSDK">
+    C# code samples on GitHub
+  </Card>
+</CardGroup>

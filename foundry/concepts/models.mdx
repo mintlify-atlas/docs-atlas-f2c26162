@@ -1,0 +1,410 @@
+---
+title: Model Concepts
+description: Understand AI models in Microsoft Foundry, including model types, deployment options, and how to choose the right model for your use case.
+---
+
+# Understanding AI Models
+
+Microsoft Foundry provides access to a comprehensive catalog of AI models from Microsoft, OpenAI, and leading AI companies. This guide explains model concepts and helps you choose the right model for your application.
+
+## Model Catalog
+
+The Foundry model catalog contains 1900+ models organized into two main categories:
+
+### Models Sold Directly by Azure
+
+These models are hosted and sold by Microsoft under Microsoft Product Terms:
+
+**Characteristics**:
+- Direct Microsoft support and SLAs
+- Deep integration with Azure services
+- Reviewed based on Microsoft's Responsible AI standards
+- Model documentation and transparency reports
+- Enterprise-grade scalability and security
+
+**Examples**:
+- Azure OpenAI: GPT-4o, GPT-4, GPT-3.5
+- Foundry Direct: DeepSeek, xAI models
+- Microsoft models: Phi family, other Microsoft-developed models
+
+<Note>
+Many Azure models support fungible Provisioned Throughput, allowing flexible use of quota and reservations across models.
+</Note>
+
+### Models from Partners and Community
+
+These models are provided by trusted third-party organizations and community contributors:
+
+**Characteristics**:
+- Diverse specialized capabilities
+- Rapid access to cutting-edge innovations
+- Community-driven development
+- Provider-managed support and maintenance
+
+**Examples**:
+- **Anthropic**: Claude family (text and vision)
+- **Meta**: Llama family (open source)
+- **Cohere**: Command and Embed models
+- **Mistral AI**: Mistral models
+- **Hugging Face**: 1400+ open models
+
+## Model Types
+
+### Foundation Models
+
+Large-scale models trained on broad datasets:
+- GPT-4o: Multimodal reasoning and generation
+- GPT-4: Advanced language understanding
+- Claude: Long-context processing
+- Llama 3: Open-source alternative
+
+### Reasoning Models
+
+Optimized for complex problem-solving:
+- Multi-step reasoning
+- Mathematical problem solving
+- Code generation and analysis
+- Logical inference
+
+### Small Language Models (SLMs)
+
+Compact models for efficient deployment:
+- Lower latency and cost
+- On-device deployment
+- Specialized tasks
+- Examples: Phi-3 family
+
+### Multimodal Models
+
+Process multiple input types:
+- Text and images
+- Audio and video
+- Examples: GPT-4o, Claude
+
+### Domain-Specific Models
+
+Trained for particular industries or tasks:
+- Healthcare and life sciences
+- Financial services
+- Legal and compliance
+- Manufacturing
+
+## Deployment Options
+
+Foundry offers multiple ways to deploy and access models:
+
+### Serverless API Deployment
+
+**How it works**:
+- Pay-per-token billing
+- Microsoft-managed infrastructure
+- No capacity management needed
+- Instant scaling
+
+**Best for**:
+- Development and testing
+- Variable workloads
+- Getting started quickly
+- Cost optimization with sporadic use
+
+**Example**:
+```python
+# Model accessed via serverless API
+response = client.chat.completions.create(
+    model="gpt-4o",  # Deployed as serverless
+    messages=messages
+)
+```
+
+### Provisioned Throughput
+
+**How it works**:
+- Reserved model capacity
+- Predictable performance and cost
+- Dedicated resources
+- Fungible across compatible models
+
+**Best for**:
+- Production workloads
+- High-volume applications
+- Latency-sensitive scenarios
+- Predictable usage patterns
+
+**Example**:
+```python
+# Create provisioned deployment
+deployment = client.deployments.create(
+    model="gpt-4o",
+    sku={
+        "name": "ProvisionedManaged",
+        "capacity": 100  # Provisioned Throughput Units
+    }
+)
+```
+
+### Managed Compute
+
+**How it works**:
+- Deploy to dedicated virtual machines
+- Full control over compute resources
+- Billed for VM hours
+- Supports open-source models
+
+**Best for**:
+- Custom model deployments
+- Open-source models
+- Fine-tuned models
+- Specific hardware requirements
+
+### Batch Deployment
+
+**How it works**:
+- Asynchronous processing
+- Cost-optimized for large batches
+- No real-time inference
+- 50% discount vs. standard pricing
+
+**Best for**:
+- Bulk processing
+- Non-time-sensitive workloads
+- Data analysis and transformation
+- Evaluation and testing
+
+## Model Capabilities
+
+### Inference Tasks
+
+<Tabs>
+  <Tab title="Text Generation">
+    Generate natural language text:
+    - Chat completions
+    - Content creation
+    - Summarization
+    - Translation
+  </Tab>
+  
+  <Tab title="Embeddings">
+    Convert text to numerical vectors:
+    - Semantic search
+    - Similarity comparison
+    - Classification
+    - Clustering
+  </Tab>
+  
+  <Tab title="Vision">
+    Process and understand images:
+    - Image description
+    - Visual question answering
+    - Object detection
+    - OCR and document analysis
+  </Tab>
+  
+  <Tab title="Code">
+    Generate and analyze code:
+    - Code completion
+    - Code explanation
+    - Bug detection
+    - Code translation
+  </Tab>
+</Tabs>
+
+### Fine-Tuning Support
+
+Some models support fine-tuning to tailor behavior:
+
+**Supported models**:
+- GPT-3.5-turbo
+- GPT-4o-mini
+- Babbage-002, Davinci-002
+- Selected open-source models
+
+**Fine-tuning options**:
+- Supervised fine-tuning
+- Custom dataset training
+- Hyperparameter optimization
+
+```python
+# Create fine-tuning job
+fine_tune = client.fine_tuning.jobs.create(
+    training_file="file-abc123",
+    model="gpt-3.5-turbo",
+    hyperparameters={
+        "n_epochs": 3
+    }
+)
+```
+
+## Choosing the Right Model
+
+### Decision Framework
+
+<Steps>
+  <Step title="Define Requirements">
+    - What task do you need to accomplish?
+    - What inputs will the model process?
+    - What outputs do you expect?
+    - What are your latency requirements?
+  </Step>
+  
+  <Step title="Consider Capabilities">
+    - Does the model support your input types?
+    - Can it handle your context length?
+    - Does it support necessary features (tool calling, JSON mode)?
+  </Step>
+  
+  <Step title="Evaluate Performance">
+    - Review benchmark scores
+    - Test with your specific use case
+    - Compare multiple models
+  </Step>
+  
+  <Step title="Assess Cost">
+    - Calculate token costs for expected volume
+    - Compare serverless vs. provisioned pricing
+    - Consider fine-tuning costs if needed
+  </Step>
+  
+  <Step title="Check Availability">
+    - Verify regional availability
+    - Confirm deployment options
+    - Check model lifecycle status
+  </Step>
+</Steps>
+
+### Model Comparison
+
+| Model | Strengths | Best For | Context Length |
+|-------|-----------|----------|----------------|
+| GPT-4o | Strong reasoning, multimodal, tool use | Complex tasks, agents, vision | 128K tokens |
+| GPT-4 | Advanced understanding, reasoning | High-quality content, analysis | 128K tokens |
+| GPT-3.5-turbo | Fast, cost-effective | Simple tasks, high volume | 16K tokens |
+| Claude 3 | Long context, analysis | Document processing, research | 200K tokens |
+| Llama 3 | Open source, customizable | Fine-tuning, specialized tasks | 8K tokens |
+| Phi-3 | Small, efficient | Edge deployment, low latency | 4K tokens |
+
+## Model Features
+
+### Tool Calling
+
+Models that support function calling:
+- GPT-4o, GPT-4, GPT-3.5-turbo
+- Claude 3 family
+- Gemini Pro
+
+```python
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {...}
+    }
+}]
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    tools=tools
+)
+```
+
+### JSON Mode
+
+Ensure valid JSON output:
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    response_format={"type": "json_object"}
+)
+```
+
+### Vision Capabilities
+
+Process images alongside text:
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "What's in this image?"},
+            {"type": "image_url", "image_url": {"url": image_url}}
+        ]
+    }]
+)
+```
+
+### Streaming
+
+Receive responses incrementally:
+
+```python
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    stream=True
+)
+
+for chunk in stream:
+    print(chunk.choices[0].delta.content, end="")
+```
+
+## Model Lifecycle
+
+### Versioning
+
+Models are versioned with release dates:
+- `gpt-4o-2024-05-13`
+- `gpt-4-turbo-2024-04-09`
+- `gpt-3.5-turbo-0125`
+
+### Deprecation and Retirement
+
+Models have defined lifecycle phases:
+
+1. **Generally Available**: Full support and SLA
+2. **Deprecation Notice**: 6-12 months advance warning
+3. **Deprecated**: No new deployments allowed
+4. **Retired**: Model no longer available
+
+<Warning>
+Monitor deprecation announcements and plan migrations early. Set up automatic updates where available.
+</Warning>
+
+### Auto-Update
+
+Some deployments support automatic version updates:
+
+```python
+deployment = client.deployments.create(
+    model="gpt-4o",
+    version_upgrade_option="OnceNewDefaultVersionAvailable"
+)
+```
+
+## Regional Availability
+
+Model availability varies by region:
+- Check the [region support page](https://learn.microsoft.com/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability)
+- Consider data residency requirements
+- Evaluate latency for global applications
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Model Deployment" icon="cloud-arrow-up" href="/foundry/models/deployment">
+    Learn how to deploy models
+  </Card>
+  <Card title="Region Support" icon="globe" href="/foundry/models/region-support">
+    Check model availability by region
+  </Card>
+  <Card title="Model Overview" icon="brain" href="/foundry/models/overview">
+    Explore the model catalog
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Start using models
+  </Card>
+</CardGroup>

@@ -1,0 +1,461 @@
+---
+title: Create an Azure AI Search Service
+description: Learn how to create and configure an Azure AI Search service in the Azure portal.
+---
+
+# Create an Azure AI Search Service
+
+Azure AI Search is an information retrieval platform for the enterprise. It supports traditional search and conversational, AI-driven search for "chat with your data" experiences.
+
+The easiest way to create a search service is through the Azure portal, covered in this guide.
+
+## Before You Start
+
+Some properties are fixed for the lifetime of the search service. Decide on these before creating your service:
+
+| Property | Description |
+|----------|-------------|
+| **Name** | Becomes part of the URL endpoint (must be unique) |
+| **Region** | Determines data residency and feature availability |
+| **Tier** | Determines infrastructure, service limits, and billing |
+| **Compute type** | Standard VMs (recommended) or confidential VMs |
+
+## Prerequisites
+
+- An Azure subscription ([start free trial](https://azure.microsoft.com/pricing/free-trial/))
+- Permissions to create resources in your subscription
+
+<Info>
+  Each Azure subscription can have one free Azure AI Search service, which is perfect for evaluation and learning.
+</Info>
+
+## Create Your Search Service
+
+<Steps>
+  <Step title="Sign in to Azure Portal">
+    Navigate to the [Azure portal](https://portal.azure.com) and sign in with your Azure account
+  </Step>
+  
+  <Step title="Create a Resource">
+    Click **Create a resource** in the upper-left corner, then search for **Azure AI Search**
+  </Step>
+  
+  <Step title="Choose Subscription">
+    Select the Azure subscription where you want to create the search service
+  </Step>
+  
+  <Step title="Set Resource Group">
+    Choose an existing resource group or create a new one:
+    - Resource groups help organize related resources
+    - They enable cost tracking and management
+    - Make cleanup easier when testing
+  </Step>
+  
+  <Step title="Name Your Service">
+    Enter a unique service name:
+    - Must be 2-60 characters
+    - Use only lowercase letters, digits, and dashes
+    - Cannot start or end with dashes
+    - Cannot contain consecutive dashes
+    - Becomes part of your endpoint: `https://your-service-name.search.windows.net`
+  </Step>
+  
+  <Step title="Select Region">
+    Choose the region where your service will be hosted. Consider:
+    - Proximity to your users and data sources
+    - Feature availability (some features require specific regions)
+    - Capacity availability (some regions may be at capacity)
+    - [Agentic retrieval](https://learn.microsoft.com/azure/search/search-region-support) region requirements
+  </Step>
+  
+  <Step title="Choose Pricing Tier">
+    Select your pricing tier based on your needs. See [Pricing Tiers](#pricing-tiers) below for details.
+  </Step>
+  
+  <Step title="Select Compute Type">
+    - **Standard** (recommended): Standard Azure VMs with data encrypted at rest and in transit
+    - **Confidential**: Hardware-based trusted execution environment (10% surcharge)
+  </Step>
+  
+  <Step title="Review and Create">
+    Review your configuration and click **Create** to deploy the service
+  </Step>
+</Steps>
+
+## Pricing Tiers
+
+Azure AI Search offers multiple pricing tiers:
+
+<Tabs>
+  <Tab title="Free">
+    **Free Tier**
+    
+    - One per subscription
+    - Perfect for learning and evaluation
+    - 50 MB storage limit
+    - 3 indexes maximum
+    - No SLA
+    - May be deleted if inactive for extended periods
+    
+    <Info>
+      Complete most quickstarts and tutorials on the Free tier.
+    </Info>
+  </Tab>
+  
+  <Tab title="Basic">
+    **Basic Tier**
+    
+    - Entry-level production tier
+    - 2 GB storage per partition
+    - Up to 3 replicas
+    - Suitable for small production workloads
+    - SLA: 99.9% for read queries with 2+ replicas
+    
+    **Best for:**
+    - Small websites or apps
+    - Development and testing
+    - Low query volumes
+  </Tab>
+  
+  <Tab title="Standard">
+    **Standard Tiers (S1, S2, S3)**
+    
+    - Production-ready tiers
+    - Scalable replicas and partitions
+    - Higher storage and performance
+    - Full feature support
+    
+    **S1:**
+    - 25 GB per partition
+    - Up to 12 replicas
+    - Most common starting tier
+    
+    **S2:**
+    - 100 GB per partition
+    - Higher query throughput
+    
+    **S3:**
+    - 200 GB per partition
+    - Maximum performance
+  </Tab>
+  
+  <Tab title="Storage Optimized">
+    **Storage Optimized (L1, L2)**
+    
+    - Optimized for large indexes
+    - Lower cost per GB
+    - Moderate query performance
+    
+    **Best for:**
+    - Large document collections
+    - Infrequent queries
+    - Cost-sensitive scenarios
+  </Tab>
+</Tabs>
+
+<Note>
+  Services created after April 3, 2024 have larger partitions and higher vector quotas at every billable tier.
+</Note>
+
+## Naming Guidelines
+
+### Valid Service Names
+
+```
+mysearchservice
+company-search-prod
+search2024
+```
+
+### Invalid Service Names
+
+```
+MySearchService    // uppercase not allowed
+-search-           // cannot start/end with dash
+search--service    // consecutive dashes not allowed
+company.search     // dots not allowed
+```
+
+<Tip>
+  Include the region in your service name (e.g., `myservice-westus`) to make multi-region management easier.
+</Tip>
+
+## Region Selection
+
+### Checklist for Choosing a Region
+
+<AccordionGroup>
+  <Accordion title="Feature Availability">
+    Check if your target region supports:
+    - Your desired pricing tier
+    - AI enrichment capabilities
+    - Integrated vectorization
+    - Multimodal search
+    - Agentic retrieval (preview)
+    
+    See [region availability by tier](https://learn.microsoft.com/azure/search/search-sku-tier#region-availability-by-tier)
+  </Accordion>
+  
+  <Accordion title="Data Residency">
+    - Keep services in the same region to minimize latency
+    - No bandwidth charges for same-region services
+    - Consider compliance and data sovereignty requirements
+  </Accordion>
+  
+  <Accordion title="AI Integration">
+    For AI enrichment with Azure AI services:
+    - Key-based connections require both services in the same region
+    - Keyless connections (preview) allow different regions
+    - Check Azure Vision availability for multimodal embeddings
+  </Accordion>
+  
+  <Accordion title="Business Continuity">
+    For high availability:
+    - Create services in multiple regions
+    - Use 2+ replicas per service for availability zones
+    - Example: East US and West US for North America coverage
+  </Accordion>
+</AccordionGroup>
+
+## Configure Authentication
+
+By default, new services use API key authentication. For better security, enable role-based access control (RBAC).
+
+<Steps>
+  <Step title="Navigate to Keys">
+    In your search service, go to **Settings** > **Keys**
+  </Step>
+  
+  <Step title="Choose Authentication Method">
+    Select one of:
+    - **API Key**: Traditional key-based authentication
+    - **Role-based access control**: Azure AD authentication (recommended)
+    - **Both**: Allow both methods during migration
+  </Step>
+  
+  <Step title="Assign Roles">
+    For RBAC, assign these roles to users or applications:
+    - **Search Service Contributor**: Manage service and indexes
+    - **Search Index Data Contributor**: Add/update/delete documents
+    - **Search Index Data Reader**: Query indexes (read-only)
+  </Step>
+</Steps>
+
+<Warning>
+  API keys provide full access to your service. Rotate keys regularly and consider switching to RBAC for production.
+</Warning>
+
+## Scale Your Service
+
+After deployment, you can scale your service to meet demand.
+
+### Replicas and Partitions
+
+- **Replicas**: Copies of your index for high availability and query throughput
+  - Minimum 2 for read-only SLA
+  - Minimum 3 for read/write SLA
+  - Distribute across availability zones automatically
+
+- **Partitions**: Divide your index for storage and parallel processing
+  - More storage capacity
+  - Higher indexing throughput
+  - Parallel query execution
+
+### Scaling Example
+
+```mermaid
+graph TD
+    A[1 Replica, 1 Partition] -->|Add Replicas| B[3 Replicas, 1 Partition]
+    B -->|High Availability|
+    A -->|Add Partitions| C[1 Replica, 3 Partitions]
+    C -->|More Storage|
+```
+
+<Steps>
+  <Step title="Go to Scale Settings">
+    Navigate to **Settings** > **Scale** in your search service
+  </Step>
+  
+  <Step title="Adjust Replicas">
+    Use the slider to increase or decrease replicas
+  </Step>
+  
+  <Step title="Adjust Partitions">
+    Use the slider to increase or decrease partitions
+  </Step>
+  
+  <Step title="Review Cost">
+    Check the estimated monthly cost before applying changes
+  </Step>
+</Steps>
+
+<Info>
+  Scaling is only available on billable tiers. Free tier services cannot be scaled.
+</Info>
+
+## Compute Type Selection
+
+### Standard Compute (Default)
+
+- Standard Azure VMs
+- Data encrypted at rest and in transit
+- Suitable for most workloads
+- Base pricing
+
+**Use when:**
+- Building typical search applications
+- Cost optimization is important
+- Standard security is sufficient
+
+### Confidential Compute
+
+- Azure confidential computing VMs
+- Hardware-based trusted execution environment
+- Data protected in use (during processing)
+- 10% surcharge
+- Limited regional availability
+- Some features restricted
+
+**Use when:**
+- Processing highly sensitive data
+- Compliance requires data-in-use protection
+- Regulatory requirements mandate confidential computing
+
+<Warning>
+  Confidential compute has limited regional availability and disables certain features. Review [data in use](https://learn.microsoft.com/azure/search/search-security-overview#data-in-use) documentation before selecting.
+</Warning>
+
+## Monitor Your Service
+
+Once deployed, monitor service health and usage:
+
+1. **Service Dashboard**: View overview metrics
+2. **Metrics**: Query latency, throttling, index size
+3. **Logs**: Diagnostic logs for troubleshooting
+4. **Alerts**: Set up notifications for issues
+
+## Cost Management
+
+Optimize your search service costs:
+
+<CardGroup cols={2}>
+  <Card title="Right-Size Resources" icon="chart-line">
+    Start small and scale up based on actual usage metrics
+  </Card>
+  
+  <Card title="Monitor Usage" icon="gauge">
+    Use Azure Cost Management to track spending
+  </Card>
+  
+  <Card title="Optimize Indexing" icon="clock">
+    Schedule indexer runs during off-peak hours
+  </Card>
+  
+  <Card title="Review Replicas" icon="copy">
+    Scale down replicas when high availability isn't needed
+  </Card>
+</CardGroup>
+
+## When to Add a Second Service
+
+Consider creating additional services for:
+
+- **Multi-region deployment**: Reduce latency for global users
+- **Disaster recovery**: Ensure service availability during regional outages
+- **Environment isolation**: Separate dev, test, and production
+- **Multi-tenant architectures**: Isolate customer data
+- **Workload separation**: Different SLAs for different applications
+
+<Note>
+  You cannot separate indexing and querying workloads. Both operations run on the same service.
+</Note>
+
+## Request Additional Quota
+
+Azure subscriptions have limits on the number of search services:
+
+1. Navigate to **Quotas** service in Azure portal
+2. Filter by **Search** services
+3. Select your subscription and region
+4. Click **Request adjustment**
+5. Enter new limit (must exceed current)
+6. Submit request
+
+Most requests are approved within 24 hours. Large quota increases (30+ services) may take up to one month.
+
+## Alternative Creation Methods
+
+Besides the Azure portal, you can create services using:
+
+### Azure PowerShell
+
+```powershell
+New-AzSearchService -ResourceGroupName "myResourceGroup" `
+    -Name "mysearchservice" `
+    -Location "West US" `
+    -Sku "Standard"
+```
+
+### Azure CLI
+
+```bash
+az search service create \
+    --name mysearchservice \
+    --resource-group myResourceGroup \
+    --location westus \
+    --sku Standard
+```
+
+### ARM Template
+
+```json
+{
+  "type": "Microsoft.Search/searchServices",
+  "apiVersion": "2023-11-01",
+  "name": "mysearchservice",
+  "location": "westus",
+  "sku": {
+    "name": "standard"
+  },
+  "properties": {
+    "replicaCount": 1,
+    "partitionCount": 1
+  }
+}
+```
+
+### Bicep
+
+```bicep
+resource searchService 'Microsoft.Search/searchServices@2023-11-01' = {
+  name: 'mysearchservice'
+  location: 'westus'
+  sku: {
+    name: 'standard'
+  }
+  properties: {
+    replicaCount: 1
+    partitionCount: 1
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create an Index" icon="list" href="/search/indexing/overview">
+    Build your first search index
+  </Card>
+  
+  <Card title="Import Data" icon="file-import" href="/search/indexing/indexers">
+    Load data from Azure services
+  </Card>
+  
+  <Card title="Security" icon="shield" href="https://learn.microsoft.com/azure/search/search-security-overview">
+    Configure authentication and access control
+  </Card>
+  
+  <Card title="Monitoring" icon="chart-bar" href="https://learn.microsoft.com/azure/search/monitor-azure-cognitive-search">
+    Set up monitoring and alerts
+  </Card>
+</CardGroup>

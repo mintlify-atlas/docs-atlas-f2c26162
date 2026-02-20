@@ -1,0 +1,108 @@
+---
+title: Solutions Overview
+description: Explore reference architectures and solution patterns for building AI applications with Microsoft Foundry.
+---
+
+# Foundry Solutions
+
+Microsoft Foundry enables a wide range of AI solution patterns across industries and use cases.
+
+## Common Solution Patterns
+
+### Customer Support Automation
+
+Build intelligent agents that:
+- Answer common questions using knowledge bases
+- Retrieve customer order information
+- Escalate complex issues to human agents
+- Maintain conversation context
+
+**Key components**:
+- File Search for FAQ retrieval
+- Function calling for order lookup
+- Azure AI Search for knowledge base
+
+### Document Processing
+
+Automate document workflows:
+- Extract information from documents
+- Summarize lengthy reports
+- Generate responses based on document content
+- Classify and route documents
+
+**Key components**:
+- File Search tool
+- GPT-4o with vision for document analysis
+- Code Interpreter for data extraction
+
+### Data Analysis
+
+Enable natural language data analysis:
+- Query databases using natural language
+- Generate visualizations
+- Perform statistical analysis
+- Create reports
+
+**Key components**:
+- Code Interpreter for analysis
+- Function calling for database access
+- GPT-4o for reasoning
+
+### Content Generation
+
+Create content at scale:
+- Generate marketing copy
+- Create product descriptions
+- Write blog posts and articles
+- Personalize content for audiences
+
+**Key components**:
+- GPT-4o for generation
+- File Search for brand guidelines
+- Function calling for content management
+
+## Reference Architectures
+
+### RAG Pattern
+
+Retrieval-Augmented Generation for knowledge grounding:
+
+1. User query received
+2. Retrieve relevant documents
+3. Inject into context
+4. Generate grounded response
+
+### Multi-Agent System
+
+Specialized agents working together:
+
+1. Supervisor agent coordinates
+2. Research agent gathers information
+3. Analysis agent processes data
+4. Writing agent creates output
+
+### Tool Integration Pattern
+
+Agent with multiple tool capabilities:
+
+1. Agent analyzes request
+2. Calls appropriate tools
+3. Combines results
+4. Generates final response
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Build your first application
+  </Card>
+  <Card title="Agents" icon="robot" href="/foundry/agents/overview">
+    Create intelligent agents
+  </Card>
+  <Card title="Models" icon="brain" href="/foundry/models/overview">
+    Choose the right model
+  </Card>
+  <Card title="Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Extend capabilities
+  </Card>
+</CardGroup>

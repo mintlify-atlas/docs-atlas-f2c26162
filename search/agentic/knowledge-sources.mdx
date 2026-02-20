@@ -1,0 +1,48 @@
+---
+title: Knowledge Sources
+description: Learn about knowledge sources for agentic retrieval including indexed and remote options.
+---
+
+# Knowledge Sources in Agentic Retrieval
+
+A knowledge source specifies content used for agentic retrieval. It either encapsulates a search index or provides a direct connection to remote data.
+
+## Knowledge Source Types
+
+### Indexed Sources
+
+Content stored in Azure AI Search indexes:
+
+- **Search Index**: Existing search index with text and vector fields
+- **Azure Blob**: Auto-generated pipeline from blob containers
+- **OneLake**: Auto-generated pipeline from lakehouse
+- **Indexed SharePoint**: Crawled and indexed SharePoint sites
+
+### Remote Sources
+
+Live data queried at retrieval time:
+
+- **Remote SharePoint**: Direct SharePoint Graph API queries
+- **Web (Bing)**: Real-time web search results
+
+## Creating Knowledge Sources
+
+```json
+{
+  "name": "product-docs",
+  "type": "searchIndex",
+  "indexName": "products-index",
+  "description": "Product documentation and specifications",
+  "alwaysQuery": false
+}
+```
+
+## Usage Control
+
+- `alwaysQuery`: Include in every query (true/false)
+- `retrievalInstructions`: Guidance for when to use
+- `description`: Helps LLM select appropriate sources
+
+## Next Steps
+
+See [Create Knowledge Base](/search/agentic/create-knowledge-base) to combine sources into a knowledge base.

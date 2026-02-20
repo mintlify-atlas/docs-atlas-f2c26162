@@ -1,0 +1,246 @@
+---
+title: Agent Environment Setup
+description: Deploy the infrastructure needed for Foundry Agent Service including resource provisioning, model deployment, and configuration.
+---
+
+# Agent Environment Setup
+
+This guide walks you through deploying the infrastructure needed to create agents with Foundry Agent Service.
+
+## Prerequisites
+
+- Azure subscription ([Create one for free](https://azure.microsoft.com/free/))
+- Azure CLI installed and authenticated
+- Appropriate permissions:
+  - **Azure AI Account Owner** - Create account and project
+  - **Role Based Access Control Administrator** - Assign RBAC (Standard Setup only)
+  - **Azure AI User** - Create and edit agents
+
+## Choose Your Setup
+
+Agent Service offers three environment configurations:
+
+<Tabs>
+  <Tab title="Basic Setup">
+    **Quick start with managed resources**
+    
+    **Includes**:
+    - Microsoft-managed storage
+    - Compatible with OpenAI Assistants API
+    - Support for non-OpenAI models
+    - Azure AI Search and Bing tools
+    
+    **Best for**: Development, testing, proof of concepts
+  </Tab>
+  
+  <Tab title="Standard Setup">
+    **Enterprise data control**
+    
+    **Includes**:
+    - Everything in Basic Setup
+    - Bring your own Azure Storage
+    - Bring your own Azure Cosmos DB
+    - Bring your own Azure AI Search
+    - Customer-managed encryption keys
+    
+    **Best for**: Production workloads, compliance requirements
+  </Tab>
+  
+  <Tab title="Standard with Private Network">
+    **Maximum security**
+    
+    **Includes**:
+    - Everything in Standard Setup
+    - Private virtual network support
+    - No public network access
+    - Data exfiltration prevention
+    
+    **Best for**: Highly regulated industries, sensitive data
+  </Tab>
+</Tabs>
+
+## Deployment Options
+
+### Basic Setup Deployment
+
+<Steps>
+  <Step title="Deploy using Azure Portal">
+    Click the deploy button:
+    
+    [![Deploy To Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fazure-ai-foundry%2Ffoundry-samples%2Frefs%2Fheads%2Fmain%2Finfrastructure%2Finfrastructure-setup-bicep%2F40-basic-agent-setup%2Fazuredeploy.json)
+  </Step>
+  
+  <Step title="Configure deployment">
+    - Select subscription and resource group
+    - Choose region
+    - Review default model (GPT-4.1)
+    - Click **Review + Create**
+  </Step>
+  
+  <Step title="Wait for completion">
+    Deployment typically takes 5-10 minutes
+  </Step>
+</Steps>
+
+**Resources created**:
+- Foundry account
+- Foundry project
+- GPT-4.1 model deployment
+- Microsoft-managed Key Vault
+
+### Standard Setup Deployment
+
+<Steps>
+  <Step title="Deploy using Azure Portal">
+    Click the deploy button:
+    
+    [![Deploy To Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fazure-ai-foundry%2Ffoundry-samples%2Frefs%2Fheads%2Fmain%2Finfrastructure%2Finfrastructure-setup-bicep%2F41-standard-agent-setup%2Fazuredeploy.json)
+  </Step>
+  
+  <Step title="Configure deployment">
+    - Select subscription and resource group
+    - Choose region
+    - Optionally provide existing resource IDs:
+      - Azure Storage
+      - Azure Cosmos DB
+      - Azure AI Search
+    - Click **Review + Create**
+  </Step>
+  
+  <Step title="Wait for completion">
+    Deployment typically takes 10-15 minutes
+  </Step>
+</Steps>
+
+**Resources created**:
+- Everything from Basic Setup
+- Azure Storage account (or use existing)
+- Azure Cosmos DB account (or use existing)
+- Azure AI Search service (or use existing)
+- Project connections
+- RBAC role assignments
+- Capability hosts
+
+## Model Selection
+
+The deployment templates support customizing the deployed model:
+
+<Warning>
+**Do not change the `modelFormat` parameter.** Templates only support Azure OpenAI models.
+</Warning>
+
+**Default configuration**:
+
+| Parameter | Default Value |
+|-----------|---------------|
+| modelName | gpt-4.1 |
+| modelFormat | OpenAI (Azure OpenAI) |
+| modelVersion | 2025-04-14 |
+| modelSkuName | GlobalStandard |
+| modelLocation | eastus |
+
+**To deploy a different model**, update `modelName` and `modelVersion` in the template parameters.
+
+See [supported models](/foundry/agents/concepts/models) for agent-compatible models.
+
+## Verify Deployment
+
+After deployment completes:
+
+<Steps>
+  <Step title="Check Azure Portal">
+    1. Navigate to your resource group
+    2. Confirm resources exist:
+       - **Basic**: Account, project, model
+       - **Standard**: Plus Storage, Cosmos DB, AI Search
+  </Step>
+  
+  <Step title="Get project endpoint">
+    1. Open your Foundry project
+    2. Navigate to **Overview**
+    3. Copy the endpoint URL:
+    ```
+    https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
+    ```
+  </Step>
+  
+  <Step title="Test connection">
+    ```bash
+    az login
+    az account set --subscription <subscription-id>
+    
+    # Verify you can access the project
+    az ml workspace show \
+      --name <project-name> \
+      --resource-group <resource-group>
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Deployment Failures
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Quota error | Insufficient quota for model | Request quota increase or select different region |
+| Permission denied | Missing RBAC Administrator role | Ask subscription owner to grant required role |
+| Resources created but agent fails | Project not connected properly | Verify connections in **Project settings** > **Connected resources** |
+| Model not available | Model not in selected region | Check [model region support](/foundry/models/region-support) |
+
+### Common Issues
+
+<Accordion title="Insufficient Cosmos DB Throughput">
+**Error**: Capability host provisioning fails
+
+**Cause**: Cosmos DB doesn't have minimum 3,000 RU/s
+
+**Solution**: Increase throughput or switch to Provisioned mode
+
+```bash
+az cosmosdb update \
+  --name <cosmos-name> \
+  --resource-group <rg> \
+  --throughput 3000
+```
+</Accordion>
+
+<Accordion title="Region Not Supported">
+**Error**: Deployment fails with region error
+
+**Cause**: Agent Service not available in selected region
+
+**Solution**: Choose a supported region:
+- East US
+- West Europe
+- Southeast Asia
+- [Check full list](/foundry/agents/quotas-limits)
+</Accordion>
+
+<Accordion title="Model Not Available">
+**Error**: Model deployment fails
+
+**Cause**: Selected model not available in region
+
+**Solution**: 
+1. Check [model availability](/foundry/models/region-support)
+2. Select compatible model
+3. Or deploy to different region
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Agent" icon="robot" href="/foundry/quickstart">
+    Build your first agent
+  </Card>
+  <Card title="Standard Setup" icon="shield-check" href="/foundry/agents/standard-setup">
+    Configure enterprise features
+  </Card>
+  <Card title="Virtual Networks" icon="network-wired" href="/foundry/agents/virtual-networks">
+    Add private network isolation
+  </Card>
+  <Card title="Agent Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Explore agent capabilities
+  </Card>
+</CardGroup>

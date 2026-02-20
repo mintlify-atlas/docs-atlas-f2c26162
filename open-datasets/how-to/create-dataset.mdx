@@ -1,0 +1,297 @@
+---
+title: Create Azure ML Datasets from Open Datasets
+description: Learn how to create Azure Machine Learning datasets from Azure Open Datasets using the Python SDK and Azure ML Studio.
+---
+
+# Create Azure Machine Learning Datasets from Azure Open Datasets
+
+Learn how to bring curated enrichment data into your local or remote machine learning experiments with Azure Machine Learning datasets and Azure Open Datasets.
+
+## Overview
+
+With an Azure Machine Learning dataset, you create a reference to the data source location, along with a copy of its metadata. Because datasets are lazily evaluated, and because the data remains in its existing location, you:
+
+- Don't risk unintentionally changing your original data sources
+- Incur no extra storage cost
+- Improve ML workflow performance speeds
+
+## Prerequisites
+
+You need:
+
+- An Azure subscription. If you don't have one, [create a free account](https://aka.ms/AMLFree)
+- An [Azure Machine Learning workspace](https://learn.microsoft.com/azure/machine-learning/how-to-manage-workspace)
+- The Azure Machine Learning SDK for Python installed:
+
+```bash
+pip install azureml-opendatasets
+```
+
+<Note>
+Some dataset classes have dependencies on the `azureml-dataprep` package, which is only compatible with 64-bit Python.
+
+For Linux users, these classes are supported only on: Debian (8, 9), Fedora (27, 28), Red Hat Enterprise Linux (7, 8), and Ubuntu (14.04, 16.04, 18.04).
+</Note>
+
+## Create Datasets with the Python SDK
+
+To create Azure Machine Learning datasets via Azure Open Datasets classes in the Python SDK, make sure you installed the package:
+
+```bash
+pip install azureml-opendatasets
+```
+
+### Return TabularDataset or FileDataset
+
+Each discrete dataset is represented by a class, and certain classes are available as either:
+- `FileDataset` - references single or multiple files in datastores or public URLs
+- `TabularDataset` - represents data in a tabular format
+
+### Example: MNIST Dataset
+
+The MNIST class can return either a `TabularDataset` or `FileDataset`:
+
+```python
+from azureml.core import Dataset
+from azureml.opendatasets import MNIST
+
+# MNIST class can return either TabularDataset or FileDataset
+tabular_dataset = MNIST.get_tabular_dataset()
+file_dataset = MNIST.get_file_dataset()
+```
+
+### Example: Diabetes Dataset
+
+The Diabetes class is only available as a `TabularDataset`:
+
+```python
+from azureml.opendatasets import Diabetes
+from azureml.core import Dataset
+
+# Diabetes class can return ONLY TabularDataset
+diabetes_tabular = Diabetes.get_tabular_dataset()
+```
+
+### Example: Public Holidays Dataset
+
+Access worldwide public holiday data:
+
+```python
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+# Get holidays from the last month
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_pandas_dataframe()
+
+# Display the data
+print(hol_df.info())
+print(hol_df.head())
+```
+
+## Register Datasets
+
+Register an Azure Machine Learning dataset with your workspace to share it with others and reuse it across experiments. When you register a dataset created from Open Datasets, no data is immediately downloaded, but the data becomes accessible later when requested from a central storage location.
+
+```python
+from azureml.core import Workspace
+
+# Connect to your workspace
+ws = Workspace.from_config()
+
+# Register the dataset
+titanic_ds = titanic_ds.register(
+    workspace=ws,
+    name='titanic_ds',
+    description='titanic training data'
+)
+```
+
+## Create Datasets with Azure ML Studio
+
+You can also create Azure Machine Learning datasets from Azure Open Datasets using the Azure Machine Learning studio interface.
+
+<Note>
+Datasets created through Azure Machine Learning studio are automatically registered to the workspace.
+</Note>
+
+### Step 1: Navigate to Data Assets
+
+In your workspace, select **Data** in the left navigation. At the **Data assets** tab, select **Create**.
+
+### Step 2: Configure Dataset Type
+
+1. Add a name and optional description for the new data asset
+2. Select **Tabular** in the **Type** dropdown
+3. Click **Next**
+
+### Step 3: Select Source
+
+1. Select **From Azure Open Datasets**
+2. Click **Next**
+
+### Step 4: Choose Dataset
+
+Select an available Azure Open Dataset from the list. For example:
+- San Francisco Safety Data
+- US Labor Force Statistics
+- Public Holidays
+- NYC Taxi datasets
+
+### Step 5: Filter Data (Optional)
+
+Optionally filter the data with available filters. For example, for the San Francisco Safety Data dataset, you can filter by date range:
+
+```
+Start date: July 1, 2024
+End date: July 17, 2024
+```
+
+### Step 6: Review and Create
+
+1. Review the settings for the new data asset
+2. Make any necessary changes
+3. Select **Create**
+
+The dataset is now available in your workspace under **Datasets**. You can use it in the same way as other datasets you created.
+
+## Direct Access with Azure Storage
+
+You can also access datasets directly from Azure Blob Storage without the SDK:
+
+```python
+import pandas as pd
+
+# Read directly from blob storage
+df = pd.read_parquet(
+    "https://azureopendatastorage.blob.core.windows.net/holidaydatacontainer/Processed/latest.parquet"
+)
+```
+
+### Using Azure Storage SDK
+
+```python
+from azure.storage.blob import BlobServiceClient, ContainerClient
+import os
+
+# Azure storage access info
+azure_storage_account_name = "azureopendatastorage"
+container_name = "holidaydatacontainer"
+folder_name = "Processed"
+
+# Create blob service client
+container_url = f"https://{azure_storage_account_name}.blob.core.windows.net/"
+blob_service_client = BlobServiceClient(container_url)
+
+# Get container client
+container_client = blob_service_client.get_container_client(container_name)
+blobs = container_client.list_blobs(folder_name)
+
+# Find target parquet file
+for blob in blobs:
+    if blob.name.endswith('.parquet'):
+        print(f"Found: {blob.name}")
+        break
+```
+
+## Access Datasets in Azure Databricks
+
+### Using azureml-opendatasets
+
+```python
+# Install in Databricks cluster first
+# pip install azureml-opendatasets
+
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_spark_dataframe()
+
+display(hol_df.limit(5))
+```
+
+### Using PySpark Direct Access
+
+```python
+# Azure storage access info
+blob_account_name = "azureopendatastorage"
+blob_container_name = "holidaydatacontainer"
+blob_relative_path = "Processed"
+
+# Configure Spark to read from Blob
+wasbs_path = f"wasbs://{blob_container_name}@{blob_account_name}.blob.core.windows.net/{blob_relative_path}"
+
+# Read parquet files
+df = spark.read.parquet(wasbs_path)
+df.createOrReplaceTempView('source')
+
+# Query the data
+display(spark.sql('SELECT * FROM source LIMIT 10'))
+```
+
+## Use Datasets in ML Experiments
+
+Once you've created and registered datasets, you can use them in your machine learning experiments:
+
+```python
+from azureml.core import Workspace, Dataset
+
+# Get workspace
+ws = Workspace.from_config()
+
+# Get registered dataset
+dataset = Dataset.get_by_name(ws, name='titanic_ds')
+
+# Use in training script
+df = dataset.to_pandas_dataframe()
+
+# Or mount for file-based access
+mount_context = dataset.mount()
+mount_context.start()
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Lazy Evaluation">
+    Datasets use lazy evaluation - data is only loaded when needed. This improves performance and reduces memory usage.
+  </Accordion>
+
+  <Accordion title="Register Datasets">
+    Register datasets in your workspace for versioning, sharing, and reproducibility across experiments.
+  </Accordion>
+
+  <Accordion title="Filter Data Early">
+    When using the SDK, filter data at query time rather than loading entire datasets into memory.
+  </Accordion>
+
+  <Accordion title="Choose the Right Format">
+    Use Parquet for large datasets and analytics workloads. Use CSV for compatibility with external tools.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Train Your First ML Model" icon="graduation-cap" href="https://learn.microsoft.com/azure/machine-learning/tutorial-1st-experiment-sdk-train">
+    Learn how to train models with datasets
+  </Card>
+  <Card title="Dataset Catalog" icon="book" href="/open-datasets/catalog">
+    Browse all available datasets
+  </Card>
+  <Card title="Public Holidays Dataset" icon="calendar" href="/open-datasets/datasets/public-holidays">
+    Explore the public holidays dataset
+  </Card>
+  <Card title="Python SDK Reference" icon="code" href="https://learn.microsoft.com/python/api/azureml-opendatasets/azureml.opendatasets">
+    View full SDK documentation
+  </Card>
+</CardGroup>

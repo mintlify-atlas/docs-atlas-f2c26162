@@ -1,0 +1,563 @@
+---
+title: 'JavaScript SDK'
+description: 'JavaScript and TypeScript SDK reference for Azure AI Foundry and Azure AI services'
+---
+
+# JavaScript SDK Overview
+
+The JavaScript/TypeScript SDKs provide comprehensive access to Azure AI services for both Node.js and browser environments. This guide covers installation, authentication, and usage examples.
+
+## Installation
+
+### Azure AI Foundry SDK
+
+<CodeGroup>
+```bash Foundry (Preview)
+npm install @azure/ai-projects@beta @azure/identity dotenv
+```
+
+```bash Foundry Classic (Stable)
+npm install @azure/ai-projects @azure/identity
+```
+</CodeGroup>
+
+### Foundry Local SDK
+
+<Tabs>
+  <Tab title="Node.js">
+    ```bash
+    npm install foundry-local-sdk
+    ```
+  </Tab>
+  <Tab title="Browser">
+    ```bash
+    npm install foundry-local-sdk
+    ```
+    Import from: `foundry-local-sdk/browser`
+  </Tab>
+</Tabs>
+
+### Azure AI Search
+
+```bash
+npm install @azure/search-documents @azure/identity
+```
+
+### Azure AI Services
+
+```bash
+npm install microsoft-cognitiveservices-speech-sdk
+npm install @azure/ai-content-safety @azure/identity
+```
+
+## Authentication
+
+All SDKs support Azure Active Directory authentication:
+
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+
+const credential = new DefaultAzureCredential();
+```
+
+<Note>
+Ensure you're authenticated with Azure CLI: `az login`
+</Note>
+
+## Azure AI Foundry
+
+### Project Client
+
+Connect to your Azure AI Foundry project:
+
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+import "dotenv/config";
+
+const projectEndpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+const deploymentName = "gpt-5.2";
+
+const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+```
+
+### Chat Completions
+
+Use the OpenAI-compatible client:
+
+```typescript
+const openAIClient = await project.getOpenAIClient();
+
+const response = await openAIClient.responses.create({
+    model: deploymentName,
+    input: "What is the size of France in square miles?",
+});
+
+console.log(`Response output: ${response.output_text}`);
+```
+
+### Streaming Responses
+
+```typescript
+const stream = await openAIClient.responses.create({
+    model: deploymentName,
+    input: "Explain quantum computing",
+    stream: true,
+});
+
+for await (const chunk of stream) {
+    if (chunk.choices[0]?.delta?.content) {
+        process.stdout.write(chunk.choices[0].delta.content);
+    }
+}
+```
+
+### List Connections
+
+```typescript
+const connections = project.connections.list();
+
+for await (const connection of connections) {
+    console.log(`Connection: ${connection.name}`);
+    console.log(`Type: ${connection.connectionType}`);
+}
+```
+
+## Foundry Local
+
+### Initialize Manager (Node.js)
+
+```typescript
+import { FoundryLocalManager } from "foundry-local-sdk";
+
+const alias = "qwen2.5-0.5b";
+
+// Initialize and load model
+const manager = new FoundryLocalManager();
+const modelInfo = await manager.init(alias);
+
+console.log("Model Info:", modelInfo);
+console.log(`Service URL: ${manager.serviceUrl}`);
+console.log(`Endpoint: ${manager.endpoint}`);
+```
+
+### List and Download Models
+
+```typescript
+// Check service status
+const isRunning = await manager.isServiceRunning();
+console.log(`Service running: ${isRunning}`);
+
+// List available models in catalog
+const catalog = await manager.listCatalogModels();
+console.log(`Available models: ${catalog.length}`);
+
+// Get specific model info
+const model = await manager.getModelInfo("qwen2.5-0.5b");
+
+if (model) {
+    console.log(`Model: ${model.displayName}`);
+    console.log(`Size: ${model.fileSizeMb} MB`);
+    console.log(`Task: ${model.task}`);
+    console.log(`Supports tools: ${model.supportsToolCalling}`);
+}
+
+// Download model
+await manager.downloadModel(alias);
+
+// Load model into memory
+await manager.loadModel(alias, 600); // TTL in seconds
+```
+
+### Model Management
+
+```typescript
+// Get cache location
+const cacheLocation = await manager.getCacheLocation();
+console.log(`Cache: ${cacheLocation}`);
+
+// List cached models
+const cachedModels = await manager.listCachedModels();
+cachedModels.forEach(model => {
+    console.log(`Cached: ${model.alias} (${model.fileSizeMb} MB)`);
+});
+
+// List loaded models
+const loadedModels = await manager.listLoadedModels();
+loadedModels.forEach(model => {
+    console.log(`Loaded: ${model.displayName}`);
+});
+
+// Unload model
+await manager.unloadModel(alias);
+```
+
+### OpenAI Integration
+
+Use Foundry Local with the OpenAI SDK:
+
+```typescript
+import { OpenAI } from "openai";
+import { FoundryLocalManager } from "foundry-local-sdk";
+
+const alias = "qwen2.5-0.5b";
+
+// Initialize Foundry Local
+const foundryLocalManager = new FoundryLocalManager();
+const modelInfo = await foundryLocalManager.init(alias);
+
+// Configure OpenAI client
+const openai = new OpenAI({
+    baseURL: foundryLocalManager.endpoint,
+    apiKey: foundryLocalManager.apiKey,
+});
+
+// Stream completion
+async function streamCompletion() {
+    const stream = await openai.chat.completions.create({
+        model: modelInfo.id,
+        messages: [{ role: "user", content: "What is the golden ratio?" }],
+        stream: true,
+    });
+
+    for await (const chunk of stream) {
+        if (chunk.choices[0]?.delta?.content) {
+            process.stdout.write(chunk.choices[0].delta.content);
+        }
+    }
+}
+
+await streamCompletion();
+```
+
+### Browser Usage
+
+For browser environments, manually specify the host:
+
+```typescript
+import { FoundryLocalManager } from "foundry-local-sdk/browser";
+
+// Start service first with CLI: foundry service start
+const host = "http://localhost:5272"; // From CLI output
+
+const manager = new FoundryLocalManager({ host });
+
+// Get models
+const catalog = await manager.listCatalogModels();
+console.log("Available models:", catalog);
+
+// Download and load
+const alias = "qwen2.5-0.5b";
+await manager.downloadModel(alias);
+await manager.loadModel(alias);
+
+// Use with OpenAI client
+const openai = new OpenAI({
+    baseURL: manager.endpoint,
+    apiKey: manager.apiKey,
+    dangerouslyAllowBrowser: true
+});
+```
+
+<Warning>
+In browser version, `init()`, `isServiceRunning()`, and `startService()` are not available. Start the service using the Foundry Local CLI.
+</Warning>
+
+## Azure AI Search
+
+### Search Client
+
+```typescript
+import { SearchClient, AzureKeyCredential } from "@azure/search-documents";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const endpoint = "https://<search-service>.search.windows.net";
+const indexName = "your-index";
+
+const searchClient = new SearchClient(
+    endpoint,
+    indexName,
+    new DefaultAzureCredential()
+);
+```
+
+### Full-Text Search
+
+```typescript
+const results = await searchClient.search("Phoenix urban development", {
+    select: ["id", "page_chunk", "page_number"],
+    top: 5
+});
+
+for await (const result of results.results) {
+    console.log(`Score: ${result.score}`);
+    console.log(`Content: ${result.document.page_chunk}`);
+    console.log(`Page: ${result.document.page_number}\n`);
+}
+```
+
+### Vector Search
+
+```typescript
+import { VectorizedQuery } from "@azure/search-documents";
+
+// Generate embedding (using your embedding function)
+const queryVector = await generateEmbedding("Phoenix metropolitan area");
+
+const vectorQuery: VectorizedQuery = {
+    kind: "vector",
+    vector: queryVector,
+    kNearestNeighborsCount: 5,
+    fields: ["page_embedding_text_3_large"]
+};
+
+const results = await searchClient.search(null, {
+    vectorQueries: [vectorQuery],
+    select: ["id", "page_chunk", "page_number"]
+});
+
+for await (const result of results.results) {
+    console.log(`Content: ${result.document.page_chunk}`);
+}
+```
+
+### Hybrid Search
+
+```typescript
+const results = await searchClient.search("Phoenix urban grid", {
+    vectorQueries: [vectorQuery],
+    select: ["id", "page_chunk", "page_number"],
+    top: 5
+});
+
+for await (const result of results.results) {
+    console.log(`Score: ${result.score}`);
+    console.log(`Content: ${result.document.page_chunk}\n`);
+}
+```
+
+### Upload Documents
+
+```typescript
+const documents = [
+    {
+        id: "doc1",
+        page_chunk: "Phoenix is a major city in Arizona.",
+        page_number: 104
+    },
+    {
+        id: "doc2",
+        page_chunk: "The Phoenix metropolitan area includes Glendale.",
+        page_number: 105
+    }
+];
+
+const result = await searchClient.uploadDocuments(documents);
+console.log(`Uploaded ${result.results.length} documents`);
+```
+
+## Azure AI Services
+
+### Speech Recognition
+
+```typescript
+import * as sdk from "microsoft-cognitiveservices-speech-sdk";
+
+const speechConfig = sdk.SpeechConfig.fromSubscription("your-key", "your-region");
+const audioConfig = sdk.AudioConfig.fromWavFileInput("audio.wav");
+
+const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+recognizer.recognizeOnceAsync(
+    result => {
+        if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+            console.log(`Recognized: ${result.text}`);
+        }
+        recognizer.close();
+    },
+    error => {
+        console.error(`Error: ${error}`);
+        recognizer.close();
+    }
+);
+```
+
+### Speech Synthesis
+
+```typescript
+const speechConfig = sdk.SpeechConfig.fromSubscription("your-key", "your-region");
+speechConfig.speechSynthesisVoiceName = "en-US-AriaNeural";
+
+const synthesizer = new sdk.SpeechSynthesizer(speechConfig);
+
+synthesizer.speakTextAsync(
+    "Hello, world!",
+    result => {
+        if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+            console.log("Speech synthesized successfully");
+        }
+        synthesizer.close();
+    },
+    error => {
+        console.error(`Error: ${error}`);
+        synthesizer.close();
+    }
+);
+```
+
+### Content Safety
+
+```typescript
+import { ContentSafetyClient, AnalyzeTextOptions } from "@azure-rest/ai-content-safety";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const endpoint = "https://<resource>.cognitiveservices.azure.com";
+
+const client = ContentSafetyClient(
+    endpoint,
+    new DefaultAzureCredential()
+);
+
+const request: AnalyzeTextOptions = {
+    body: {
+        text: "Sample text to analyze"
+    }
+};
+
+const response = await client.path("/text:analyze").post(request);
+
+if (response.status === "200") {
+    const result = response.body;
+    console.log(`Hate: ${result.hateResult?.severity}`);
+    console.log(`Violence: ${result.violenceResult?.severity}`);
+}
+```
+
+## Error Handling
+
+```typescript
+import { RestError } from "@azure/core-rest-pipeline";
+
+try {
+    const results = await searchClient.search("query");
+} catch (error) {
+    if (error instanceof RestError) {
+        console.error(`HTTP ${error.statusCode}: ${error.message}`);
+        
+        if (error.statusCode === 404) {
+            console.error("Index not found");
+        }
+    } else {
+        console.error(`Unexpected error: ${error}`);
+    }
+}
+```
+
+## TypeScript Types
+
+Leverage TypeScript for type safety:
+
+```typescript
+interface SearchDocument {
+    id: string;
+    page_chunk: string;
+    page_number: number;
+    page_embedding_text_3_large?: number[];
+}
+
+const searchClient = new SearchClient<SearchDocument>(
+    endpoint,
+    indexName,
+    credential
+);
+
+const results = await searchClient.search("query");
+
+for await (const result of results.results) {
+    // TypeScript knows the document shape
+    const doc: SearchDocument = result.document;
+    console.log(doc.page_chunk);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Environment Variables">
+    Use environment variables for configuration:
+    
+    ```typescript
+    import "dotenv/config";
+    
+    const endpoint = process.env.AZURE_SEARCH_ENDPOINT!;
+    const indexName = process.env.AZURE_SEARCH_INDEX!;
+    ```
+    
+    Create `.env` file:
+    ```
+    AZURE_SEARCH_ENDPOINT=https://your-service.search.windows.net
+    AZURE_SEARCH_INDEX=your-index
+    ```
+  </Accordion>
+  
+  <Accordion title="Async/Await">
+    Always use async/await with proper error handling:
+    
+    ```typescript
+    async function searchDocuments() {
+        try {
+            const results = await searchClient.search("query");
+            return results;
+        } catch (error) {
+            console.error("Search failed:", error);
+            throw error;
+        }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Client Reuse">
+    Reuse client instances for better performance:
+    
+    ```typescript
+    // Good: Create once, use multiple times
+    const client = new SearchClient(...);
+    
+    for (const query of queries) {
+        await client.search(query);
+    }
+    
+    // Bad: Create new client each time
+    for (const query of queries) {
+        const client = new SearchClient(...);
+        await client.search(query);
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Package References
+
+| Package | npm | Documentation |
+|---------|-----|---------------|
+| @azure/ai-projects | [Link](https://www.npmjs.com/package/@azure/ai-projects) | [Docs](/javascript/api/overview/azure/ai-projects-readme) |
+| foundry-local-sdk | [Link](https://www.npmjs.com/package/foundry-local-sdk) | [Docs](https://aka.ms/fl-js-sdk) |
+| @azure/search-documents | [Link](https://www.npmjs.com/package/@azure/search-documents) | [Docs](/javascript/api/overview/azure/search-documents-readme) |
+| microsoft-cognitiveservices-speech-sdk | [Link](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk) | [Docs](/javascript/api/microsoft-cognitiveservices-speech-sdk) |
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="code" href="/api/foundry">
+    Foundry REST API documentation
+  </Card>
+  <Card title="Python SDK" icon="python" href="/sdk/python">
+    Python SDK reference
+  </Card>
+  <Card title=".NET SDK" icon="code" href="/sdk/dotnet">
+    C# and .NET SDK documentation
+  </Card>
+  <Card title="TypeScript Guide" icon="book" href="https://www.typescriptlang.org/docs/">
+    TypeScript documentation
+  </Card>
+</CardGroup>

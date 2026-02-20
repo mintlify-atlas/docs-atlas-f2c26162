@@ -1,0 +1,173 @@
+---
+title: Responsible AI Overview
+description: Learn about responsible AI practices, safety controls, and governance tools in Microsoft Foundry for building trustworthy AI agents.
+---
+
+# Responsible AI for Microsoft Foundry
+
+Microsoft Foundry provides comprehensive tools and practices for building trustworthy AI agents with end-to-end security, observability, and governance.
+
+## Responsible AI Framework
+
+Our approach follows the [Microsoft Responsible AI Standard](https://aka.ms/RAI) with three key stages:
+
+<Steps>
+  <Step title="Discover">
+    Identify agent quality, safety, and security risks before and after deployment
+  </Step>
+  <Step title="Protect">
+    Apply safeguards at model output and agent runtime levels
+  </Step>
+  <Step title="Govern">
+    Monitor agents through tracing, logging, and compliance integrations
+  </Step>
+</Steps>
+
+## Safety Controls
+
+### Content Filtering
+
+**Capabilities**:
+- Block harmful inputs and outputs
+- Detect and prevent jailbreak attempts
+- Mitigate prompt injection attacks (including XPIA)
+- Filter for multiple harm categories
+
+**Categories**:
+- Violence and self-harm
+- Sexual content
+- Hate speech
+- Protected material
+
+### Prompt Injection Protection
+
+**Protections**:
+- Input sanitization
+- Context isolation
+- Cross-prompt injection attack (XPIA) detection
+- User/system message separation
+
+## Observability
+
+### Conversation Tracing
+
+**Features**:
+- Full conversation history
+- Tool invocation logs
+- Decision point tracking
+- Performance metrics
+
+### Application Insights Integration
+
+**Capabilities**:
+- Usage data and metrics
+- Performance monitoring
+- Error tracking
+- Custom telemetry
+
+### Evaluation Tools
+
+**Assessment types**:
+- Quality evaluations
+- Safety assessments
+- Performance benchmarks
+- Custom metrics
+
+## Governance
+
+### Identity and Access
+
+**Controls**:
+- Microsoft Entra ID authentication
+- Role-based access control (RBAC)
+- Managed identities
+- Conditional access policies
+
+### Data Governance
+
+**Capabilities**:
+- Data residency controls
+- Customer-managed encryption keys
+- Audit logging
+- Compliance certifications
+
+### Network Security
+
+**Features**:
+- Private endpoints
+- Virtual network integration
+- Network isolation
+- Data exfiltration prevention
+
+## Security Alerts
+
+View and respond to security alerts in the **Risks + alerts** section:
+
+<Steps>
+  <Step title="Sign in">
+    Navigate to Microsoft Foundry portal
+  </Step>
+  <Step title="Select Project">
+    Choose your project
+  </Step>
+  <Step title="View Alerts">
+    Go to **Risks + alerts** in left navigation
+  </Step>
+  <Step title="Review & Act">
+    Review active alerts and take remediation steps
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Accordion title="Test Before Deployment">
+- Run adversarial testing
+- Evaluate with representative data
+- Test edge cases and failure modes
+- Conduct red team exercises
+</Accordion>
+
+<Accordion title="Monitor Continuously">
+- Set up Application Insights
+- Track key performance metrics
+- Monitor for anomalies
+- Review conversation logs regularly
+</Accordion>
+
+<Accordion title="Implement Defense in Depth">
+- Use content filters
+- Enable prompt injection protection
+- Apply RBAC and network controls
+- Encrypt data at rest and in transit
+</Accordion>
+
+<Accordion title="Document and Audit">
+- Maintain agent documentation
+- Log all configurations
+- Review audit logs
+- Document incident responses
+</Accordion>
+
+## Resources
+
+- [Microsoft AI Principles](https://www.microsoft.com/ai/responsible-ai)
+- [Responsible AI Resources](https://www.microsoft.com/ai/tools-practices)
+- [Azure AI Content Safety](https://azure.microsoft.com/services/cognitive-services/content-safety/)
+- [Microsoft Responsible AI Standard](https://aka.ms/RAI)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Overview" icon="robot" href="/foundry/agents/overview">
+    Learn about agent capabilities
+  </Card>
+  <Card title="Standard Setup" icon="shield-check" href="/foundry/agents/standard-setup">
+    Configure enterprise security
+  </Card>
+  <Card title="Environment Setup" icon="gear" href="/foundry/agents/environment-setup">
+    Deploy secure infrastructure
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Build your first agent
+  </Card>
+</CardGroup>

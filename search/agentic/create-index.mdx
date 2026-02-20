@@ -1,0 +1,88 @@
+---
+title: Create Index for Agentic Retrieval
+description: Build search indexes optimized for agentic retrieval workloads.
+---
+
+# Create an Index for Agentic Retrieval
+
+Indexes for agentic retrieval require specific configurations to support multi-query patterns and semantic reranking.
+
+## Requirements
+
+<Steps>
+  <Step title="Semantic Configuration">
+    Required for semantic reranking of subquery results
+  </Step>
+  
+  <Step title="Vector Fields">
+    Recommended for hybrid search across text and embeddings
+  </Step>
+  
+  <Step title="Filterable Fields">
+    Optional but useful for pre-filtering results
+  </Step>
+  
+  <Step title="Default Scoring Profile">
+    Optional for custom relevance tuning
+  </Step>
+</Steps>
+
+## Index Schema Example
+
+```json
+{
+  "name": "products-index",
+  "fields": [
+    {
+      "name": "productId",
+      "type": "Edm.String",
+      "key": true
+    },
+    {
+      "name": "description",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "descriptionVector",
+      "type": "Collection(Edm.Single)",
+      "searchable": true,
+      "dimensions": 1536,
+      "vectorSearchProfile": "my-vector-profile"
+    }
+  ],
+  "semantic": {
+    "defaultConfiguration": "my-semantic-config",
+    "configurations": [
+      {
+        "name": "my-semantic-config",
+        "prioritizedFields": {
+          "titleField": {"fieldName": "title"},
+          "contentFields": [
+            {"fieldName": "description"}
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+## Best Practices
+
+- Use descriptive field names
+- Include both text and vector fields for hybrid search
+- Configure semantic ranking on most important fields
+- Add filters for common query patterns
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Knowledge Source" icon="database" href="/search/agentic/knowledge-sources">
+    Wrap your index in a knowledge source
+  </Card>
+  
+  <Card title="Vector Search" icon="diagram-project" href="/search/concepts/vector-search">
+    Add vector capabilities to your index
+  </Card>
+</CardGroup>

@@ -1,80 +1,339 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart - Get Started with Azure AI
+description: Create your first Azure AI project and deploy an intelligent application in minutes.
 ---
 
-## Get started in three steps
+# Quickstart: Get Started with Azure AI
 
-Get your documentation site running locally and make your first customization.
+This quickstart guides you through creating your first Azure AI project and deploying an intelligent application. You'll set up the necessary resources and run your first AI workload in under 15 minutes.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Before you begin, ensure you have:
+
+<Check>
+  - An Azure account with an active subscription ([Create a free account](https://azure.microsoft.com/pricing/purchase-options/azure-account))
+  - Basic familiarity with the Azure portal or command line tools
+  - A code editor (VS Code recommended)
+</Check>
+
+## Choose Your Path
+
+Select the Azure AI service that best fits your needs:
+
+<Tabs>
+  <Tab title="Microsoft Foundry">
+    Best for building AI agents, chatbots, and generative AI applications.
+  </Tab>
+  <Tab title="Azure Machine Learning">
+    Best for training custom ML models and MLOps workflows.
+  </Tab>
+  <Tab title="Azure AI Search">
+    Best for adding intelligent search and RAG capabilities to your apps.
+  </Tab>
+</Tabs>
+
+## Option 1: Microsoft Foundry Quickstart
+
+<Steps>
+  <Step title="Create a Foundry Resource">
+    Navigate to the [Microsoft Foundry portal](https://ai.azure.com) and sign in with your Azure account.
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    Click **Create workspace** and provide:
+    - **Workspace name**: A unique identifier for your project
+    - **Subscription**: Your Azure subscription
+    - **Resource group**: Create new or use existing
+    - **Region**: Choose the region closest to you
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    Click **Create** to provision your Foundry resource.
+  </Step>
+  
+  <Step title="Create Your First Agent">
+    Once your workspace is ready:
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    1. Select **Agents** from the left navigation
+    2. Click **+ New agent**
+    3. Choose a model (e.g., GPT-4)
+    4. Add custom instructions for your agent's behavior
+    5. Configure tools if needed (code interpreter, functions, etc.)
+    
+    Click **Create** to deploy your agent.
+  </Step>
+  
+  <Step title="Test Your Agent">
+    In the agent playground:
+    
+    1. Type a message to your agent
+    2. Observe the response and behavior
+    3. Adjust instructions or parameters as needed
+    4. Test different scenarios
+    
+    Your agent is now ready to integrate into applications.
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+### Deploy with Python SDK
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Install the Microsoft Foundry SDK:
 
-### Step 3: Go live
+```bash
+pip install azure-ai-projects
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Create and interact with an agent:
 
-## Next steps
+```python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
 
-Now that you have your docs running, explore these key features:
+# Initialize client
+credential = DefaultAzureCredential()
+client = AIProjectClient(
+    credential=credential,
+    subscription_id="your-subscription-id",
+    resource_group_name="your-resource-group",
+    project_name="your-project-name"
+)
 
-<CardGroup cols={2}>
+# Create an agent
+agent = client.agents.create(
+    model="gpt-4",
+    name="assistant",
+    instructions="You are a helpful AI assistant."
+)
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+# Create a thread and send a message
+thread = client.agents.create_thread()
+message = client.agents.create_message(
+    thread_id=thread.id,
+    role="user",
+    content="What are the key features of Azure AI?"
+)
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+# Run the agent
+run = client.agents.create_run(
+    thread_id=thread.id,
+    agent_id=agent.id
+)
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+# Get the response
+response = client.agents.get_message(
+    thread_id=thread.id,
+    message_id=run.message_id
+)
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+print(response.content)
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The Microsoft Foundry API provides a consistent contract for working across different model providers including Azure OpenAI, DeepSeek, xAI, and marketplace models.
 </Note>
+
+## Option 2: Azure Machine Learning Quickstart
+
+<Steps>
+  <Step title="Create a Workspace">
+    Sign in to [Azure Machine Learning studio](https://ml.azure.com).
+    
+    Click **Create workspace** and provide:
+    - **Workspace name**: Unique name for your workspace
+    - **Subscription**: Your Azure subscription
+    - **Resource group**: Create or select existing
+    - **Region**: Choose your preferred region
+    
+    Click **Review + Create**, then **Create**.
+  </Step>
+  
+  <Step title="Create a Compute Instance">
+    A compute instance is your cloud development environment.
+    
+    1. Select your workspace
+    2. Click **New** → **Compute instance**
+    3. Provide a name and keep defaults
+    4. Click **Create**
+    
+    Wait a few minutes for provisioning to complete.
+  </Step>
+  
+  <Step title="Run Your First Notebook">
+    1. Navigate to **Notebooks** in the left panel
+    2. Click **Samples** to view sample notebooks
+    3. Browse to **SDK v2** folder
+    4. Select a quickstart notebook (e.g., `quickstart.ipynb`)
+    5. Click **Clone** to copy to your workspace
+    6. Select your compute instance
+    7. Run the cells to train your first model
+  </Step>
+</Steps>
+
+### Train a Model with Python
+
+Install the Azure ML SDK:
+
+```bash
+pip install azure-ai-ml azure-identity
+```
+
+Submit a training job:
+
+```python
+from azure.ai.ml import MLClient, command
+from azure.identity import DefaultAzureCredential
+from azure.ai.ml.entities import Environment
+
+# Connect to workspace
+ml_client = MLClient(
+    DefaultAzureCredential(),
+    subscription_id="your-subscription-id",
+    resource_group_name="your-resource-group",
+    workspace_name="your-workspace"
+)
+
+# Define training job
+job = command(
+    code="./src",
+    command="python train.py --data ${{inputs.data}}",
+    inputs={"data": "azureml:training-data:1"},
+    environment="azureml:sklearn-env:1",
+    compute="cpu-cluster",
+    display_name="quickstart-train"
+)
+
+# Submit job
+returned_job = ml_client.jobs.create_or_update(job)
+print(f"Job submitted: {returned_job.studio_url}")
+```
+
+## Option 3: Azure AI Search Quickstart
+
+<Steps>
+  <Step title="Create a Search Service">
+    1. Open the [Azure portal](https://portal.azure.com)
+    2. Click **Create a resource** → Search for "Azure AI Search"
+    3. Click **Create** and fill in:
+       - **Service name**: Unique name for your search service
+       - **Subscription**: Your Azure subscription
+       - **Resource group**: Create or select existing
+       - **Location**: Choose your region
+       - **Pricing tier**: Start with Free or Basic
+    4. Click **Review + Create**, then **Create**
+  </Step>
+  
+  <Step title="Create Your First Index">
+    In the Azure portal, navigate to your search service:
+    
+    1. Click **Import data** to use the wizard
+    2. Connect to a data source (Azure Blob Storage, SQL, etc.)
+    3. Optionally add AI enrichment for text extraction and analysis
+    4. Define index fields and attributes
+    5. Create an indexer to populate the index
+    
+    Or create an index programmatically using the SDK.
+  </Step>
+  
+  <Step title="Query Your Index">
+    Use the **Search Explorer** in the portal:
+    
+    1. Select your index
+    2. Enter a search query
+    3. View results and refine your query
+    4. Test different query types (full-text, vector, hybrid)
+  </Step>
+</Steps>
+
+### Query with Python SDK
+
+Install the Azure Search SDK:
+
+```bash
+pip install azure-search-documents azure-identity
+```
+
+Perform a search query:
+
+```python
+from azure.search.documents import SearchClient
+from azure.core.credentials import AzureKeyCredential
+
+# Initialize client
+search_client = SearchClient(
+    endpoint="https://your-service.search.windows.net",
+    index_name="your-index",
+    credential=AzureKeyCredential("your-api-key")
+)
+
+# Perform a search
+results = search_client.search(
+    search_text="machine learning",
+    select=["title", "content", "category"],
+    top=10
+)
+
+# Display results
+for result in results:
+    print(f"Title: {result['title']}")
+    print(f"Content: {result['content'][:200]}...")
+    print(f"Score: {result['@search.score']}")
+    print("---")
+```
+
+## Next Steps
+
+Now that you've completed the quickstart, explore these resources:
+
+<CardGroup cols={2}>
+  <Card title="Build an AI Agent" icon="robot" href="/tutorials/build-agent">
+    Create a multi-tool agent with memory and knowledge integration
+  </Card>
+  
+  <Card title="Train a Custom Model" icon="brain" href="/tutorials/train-model">
+    Learn MLOps best practices for production deployments
+  </Card>
+  
+  <Card title="Implement RAG" icon="book" href="/tutorials/rag-application">
+    Build a retrieval-augmented generation app with AI Search
+  </Card>
+  
+  <Card title="Explore Samples" icon="code" href="/samples">
+    Browse code samples for common scenarios
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Authentication Issues">
+  If you encounter authentication errors:
+  - Ensure you're logged in to the correct Azure account
+  - Verify your subscription has the necessary permissions
+  - Check that your service principal has the required roles
+  - Try using `az login` to refresh credentials
+</Accordion>
+
+<Accordion title="Resource Creation Failures">
+  Common reasons for failures:
+  - Insufficient quota in the selected region
+  - Resource name already in use (names must be globally unique)
+  - Missing permissions on the subscription or resource group
+  - Region doesn't support the selected tier or features
+</Accordion>
+
+<Accordion title="SDK Installation Problems">
+  If pip installation fails:
+  - Upgrade pip: `pip install --upgrade pip`
+  - Use a virtual environment: `python -m venv venv`
+  - Check Python version (3.8+ recommended)
+  - Try installing with `--user` flag
+</Accordion>
+
+<Tip>
+  **Free Trial**: New Azure accounts receive free credits. Use the Free tier for Foundry exploration and AI Search, and leverage free compute hours in Azure Machine Learning.
+</Tip>
+
+## Additional Resources
+
+- [Azure AI Services Overview](/services/overview)
+- [Microsoft Foundry Documentation](/services/ai-foundry)
+- [Azure ML Documentation](/services/machine-learning)
+- [Azure AI Search Documentation](/services/ai-search)
+- [GitHub Code Samples](https://github.com/Azure-Samples)
+- [Microsoft Learn Training Paths](https://learn.microsoft.com/training/azure/)

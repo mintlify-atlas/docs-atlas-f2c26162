@@ -1,0 +1,319 @@
+---
+title: Threads, Runs, and Messages
+description: Learn about the core components of agent execution in Foundry Agent Service including threads, runs, and messages.
+---
+
+# Threads, Runs, and Messages
+
+Foundry Agent Service uses persistent threads, runs, and messages to manage conversation states and agent execution. Understanding these components is essential for building effective agents.
+
+## Core Components
+
+### Agent
+
+A configurable orchestration component that:
+- Uses AI models with instructions and tools
+- Processes messages in threads
+- Maintains conversation context
+- Enforces safety and governance controls
+
+### Thread
+
+A conversation session between an agent and a user:
+- Stores messages (up to 100,000 per thread)
+- Automatically handles context truncation
+- Persists until explicitly deleted
+- Maintains conversation history
+
+### Message
+
+Individual communication within a thread:
+- Created by agents or users
+- Can include text, images, and files
+- Stored in ordered list format
+- Supports attachments
+
+### Run
+
+An invocation of an agent on a thread:
+- Processes all messages in the thread
+- May append new messages (agent responses)
+- Calls models and tools as needed
+- Tracks execution status
+
+## Agent Workflow
+
+<Steps>
+  <Step title="Create Agent">
+    Define agent with model, instructions, and tools
+  </Step>
+  <Step title="Create Thread">
+    Create conversation session (reuse for ongoing conversations)
+  </Step>
+  <Step title="Send Messages">
+    Add user messages to the thread
+  </Step>
+  <Step title="Run Agent">
+    Execute agent to process messages
+  </Step>
+  <Step title="Monitor Status">
+    Poll run status until completion
+  </Step>
+  <Step title="Get Response">
+    Retrieve agent's messages from thread
+  </Step>
+</Steps>
+
+## Run Status Values
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Run is waiting to be processed |
+| `in_progress` | Agent is actively processing |
+| `requires_action` | Agent needs function call results |
+| `completed` | Run finished successfully |
+| `failed` | Run encountered an error |
+| `cancelled` | Run was cancelled by user |
+| `expired` | Run exceeded time limits (10 min) |
+
+## Code Examples
+
+### Basic Agent Execution
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+import time
+
+project = AIProjectClient(
+    endpoint="https://<resource>.services.ai.azure.com/api/projects/<project>",
+    credential=DefaultAzureCredential()
+)
+
+# Create agent
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="my-agent",
+    instructions="You are a helpful assistant"
+)
+
+# Create thread
+thread = project.agents.threads.create()
+
+# Add message
+message = project.agents.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Hello! Can you help me?"
+)
+
+# Create and monitor run
+run = project.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
+
+while run.status in ["queued", "in_progress"]:
+    time.sleep(1)
+    run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+
+print(f"Run status: {run.status}")
+
+# Get messages
+if run.status == "completed":
+    messages = project.agents.messages.list(thread_id=thread.id)
+    for msg in messages:
+        print(f"{msg['role']}: {msg['content']}")
+
+# Cleanup
+project.agents.delete_agent(agent.id)
+project.agents.threads.delete(thread.id)
+```
+
+```csharp C#
+using Azure.AI.Agents.Persistent;
+using Azure.Identity;
+
+var projectEndpoint = "https://<resource>.services.ai.azure.com/api/projects/<project>";
+PersistentAgentsClient client = new(projectEndpoint, new DefaultAzureCredential());
+
+// Create agent
+PersistentAgent agent = client.Administration.CreateAgent(
+    model: "gpt-4o",
+    name: "my-agent",
+    instructions: "You are a helpful assistant"
+);
+
+// Create thread
+PersistentAgentThread thread = client.Threads.CreateThread();
+
+// Add message
+client.Messages.CreateMessage(
+    thread.Id,
+    MessageRole.User,
+    "Hello! Can you help me?"
+);
+
+// Create and monitor run
+ThreadRun run = client.Runs.CreateRun(thread.Id, agent.Id);
+
+do
+{
+    Thread.Sleep(TimeSpan.FromMilliseconds(500));
+    run = client.Runs.GetRun(thread.Id, run.Id);
+}
+while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
+
+Console.WriteLine($"Run status: {run.Status}");
+
+// Get messages
+if (run.Status == RunStatus.Completed)
+{
+    var messages = client.Messages.GetMessages(thread.Id);
+    foreach (var message in messages)
+    {
+        Console.WriteLine($"{message.Role}: {message.ContentItems[0]}");
+    }
+}
+
+// Cleanup
+client.Administration.DeleteAgent(agent.Id);
+client.Threads.DeleteThread(thread.Id);
+```
+</CodeGroup>
+
+### Using create_and_poll
+
+<CodeGroup>
+```python Python
+# Simpler alternative that handles polling
+run = project.agents.runs.create_and_poll(
+    thread_id=thread.id,
+    agent_id=agent.id
+)
+
+if run.status == "completed":
+    messages = project.agents.messages.list(thread_id=thread.id)
+    print(messages)
+```
+</CodeGroup>
+
+## Thread Management
+
+### When to Create New Threads
+
+**Create a new thread when**:
+- Starting a fresh topic or conversation
+- User explicitly wants to "start over"
+- Different users (each user should have their own thread)
+- Thread becomes too large (impacts performance)
+
+**Reuse existing thread when**:
+- Continuing an ongoing conversation
+- Maintaining conversation context
+- Building on previous interactions
+
+### Thread Lifecycle
+
+Threads persist until explicitly deleted:
+
+```python
+# Delete thread when no longer needed
+project.agents.threads.delete(thread_id=thread.id)
+```
+
+**Storage considerations**:
+- Threads with many messages consume storage
+- Plan retention strategy based on:
+  - Storage costs
+  - Compliance requirements
+  - Business needs
+
+### Thread Limits
+
+- Maximum 100,000 messages per thread
+- Automatic context truncation when needed
+- Performance may degrade with thousands of messages
+- Consider creating new threads for long conversations
+
+## Best Practices
+
+<Accordion title="Clean Up Resources">
+Delete threads and agents when no longer needed:
+
+```python
+# Delete agent
+project.agents.delete_agent(agent.id)
+
+# Delete thread
+project.agents.threads.delete(thread.id)
+```
+</Accordion>
+
+<Accordion title="Handle Errors Gracefully">
+Always check run status and implement retry logic:
+
+```python
+import time
+
+max_retries = 3
+for attempt in range(max_retries):
+    run = project.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
+    
+    while run.status in ["queued", "in_progress"]:
+        time.sleep(1)
+        run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+    
+    if run.status == "completed":
+        break
+    elif run.status == "failed":
+        if attempt < max_retries - 1:
+            print(f"Run failed, retrying... (attempt {attempt + 1})")
+            time.sleep(2 ** attempt)  # Exponential backoff
+        else:
+            print(f"Run failed after {max_retries} attempts")
+            # Handle failure
+```
+</Accordion>
+
+<Accordion title="Use Appropriate Polling Intervals">
+Start with short intervals, increase for longer operations:
+
+```python
+import time
+
+delay = 0.5  # Start with 500ms
+max_delay = 5  # Cap at 5 seconds
+
+while run.status in ["queued", "in_progress"]:
+    time.sleep(delay)
+    run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+    
+    # Increase delay for next poll
+    delay = min(delay * 1.5, max_delay)
+```
+</Accordion>
+
+<Accordion title="Limit Message Size">
+Keep conversations concise for optimal performance:
+
+- Avoid extremely long messages
+- Summarize when threads get large
+- Create new threads for new topics
+- Monitor thread message count
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Overview" icon="robot" href="/foundry/agents/overview">
+    Learn about Foundry Agent Service
+  </Card>
+  <Card title="Environment Setup" icon="gear" href="/foundry/agents/environment-setup">
+    Deploy agent infrastructure
+  </Card>
+  <Card title="Agent Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Extend agent capabilities
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Create your first agent
+  </Card>
+</CardGroup>

@@ -1,0 +1,465 @@
+---
+title: Azure Translator Overview
+description: Neural machine translation service for real-time text and document translation across 100+ languages
+---
+
+# Azure Translator
+
+Azure Translator is a cloud-based neural machine translation service for translating text and documents across more than 100 languages and dialects. Powered by deep neural networks, Translator provides high-quality, context-aware translations for real-time and batch scenarios.
+
+## Key Capabilities
+
+<CardGroup cols={3}>
+  <Card title="Text Translation" icon="language">
+    Real-time translation of text between languages
+  </Card>
+  
+  <Card title="Document Translation" icon="file">
+    Translate entire documents while preserving formatting
+  </Card>
+  
+  <Card title="Custom Translator" icon="pen-to-square">
+    Train custom models for domain-specific terminology
+  </Card>
+</CardGroup>
+
+## Text Translation
+
+Translate text in real-time with neural machine translation:
+
+### Basic Translation
+
+Translate text between supported languages:
+
+```python
+import requests
+import uuid
+
+endpoint = "https://api.cognitive.microsofttranslator.com"
+path = '/translate?api-version=3.0'
+params = '&to=de&to=es'
+constructed_url = endpoint + path + params
+
+headers = {
+    'Ocp-Apim-Subscription-Key': '<your-key>',
+    'Ocp-Apim-Subscription-Region': '<your-region>',
+    'Content-type': 'application/json',
+    'X-ClientTraceId': str(uuid.uuid4())
+}
+
+body = [{
+    'text': 'Hello, how are you?'
+}]
+
+response = requests.post(constructed_url, headers=headers, json=body)
+result = response.json()
+
+for translation in result[0]['translations']:
+    print(f"{translation['to']}: {translation['text']}")
+```
+
+### Features
+
+<Tabs>
+  <Tab title="Multiple Languages">
+    Translate to multiple target languages in a single request:
+    
+    ```python
+    # Translate to German, Spanish, and French
+    params = '&to=de&to=es&to=fr'
+    
+    body = [{'text': 'Welcome to Azure Translator'}]
+    response = requests.post(url, headers=headers, json=body)
+    
+    for translation in response.json()[0]['translations']:
+        print(f"{translation['to']}: {translation['text']}")
+    ```
+  </Tab>
+  
+  <Tab title="Language Detection">
+    Automatically detect source language:
+    
+    ```python
+    path = '/detect?api-version=3.0'
+    
+    body = [{
+        'text': 'Bonjour, comment allez-vous?'
+    }]
+    
+    response = requests.post(url, headers=headers, json=body)
+    result = response.json()[0]
+    
+    print(f"Language: {result['language']}")
+    print(f"Confidence: {result['score']}")
+    ```
+  </Tab>
+  
+  <Tab title="Transliteration">
+    Convert text between scripts (e.g., Chinese to Latin):
+    
+    ```python
+    path = '/transliterate?api-version=3.0'
+    params = '&language=zh-Hans&fromScript=Hans&toScript=Latn'
+    
+    body = [{'text': '你好'}]
+    response = requests.post(url, headers=headers, json=body)
+    
+    print(response.json()[0]['text'])  # Output: ni hao
+    ```
+  </Tab>
+  
+  <Tab title="Dictionary Lookup">
+    Get alternate translations and back-translations:
+    
+    ```python
+    path = '/dictionary/lookup?api-version=3.0'
+    params = '&from=en&to=es'
+    
+    body = [{'text': 'happy'}]
+    response = requests.post(url, headers=headers, json=body)
+    
+    for translation in response.json()[0]['translations']:
+        print(f"{translation['displayTarget']} ({translation['posTag']})")
+    ```
+  </Tab>
+</Tabs>
+
+### Advanced Features
+
+#### Dynamic Dictionary
+
+Specify custom translations for specific terms:
+
+```python
+body = [{
+    'text': 'The word wordomatic is a custom term.',
+    'translation': {
+        'text': 'custom term',
+        'to': 'es'
+    }
+}]
+```
+
+#### Prevent Translation
+
+Mark content that should not be translated:
+
+```python
+body = [{
+    'text': 'This <mstrans:dictionary translation="custom">word</mstrans:dictionary> is custom.'
+}]
+```
+
+#### Profanity Handling
+
+Control how profanity is handled:
+
+```python
+# Mark profanity with tags
+params = '&to=de&profanityAction=Marked'
+
+# Delete profanity
+params = '&to=de&profanityAction=Deleted'
+
+# No filtering (default)
+params = '&to=de&profanityAction=NoAction'
+```
+
+## Document Translation
+
+Translate documents while preserving formatting and structure:
+
+### Batch Document Translation
+
+Translate multiple documents asynchronously:
+
+```python
+from azure.ai.translation.document import DocumentTranslationClient
+from azure.core.credentials import AzureKeyCredential
+
+client = DocumentTranslationClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<key>")
+)
+
+# Start batch translation
+poller = client.begin_translation(
+    source_url="https://<storage>.blob.core.windows.net/source?<sas>",
+    target_url="https://<storage>.blob.core.windows.net/target?<sas>",
+    target_language="de"
+)
+
+# Wait for completion
+result = poller.result()
+
+print(f"Status: {result.status}")
+print(f"Documents translated: {result.documents_succeeded_count}")
+print(f"Documents failed: {result.documents_failed_count}")
+```
+
+### Single Document Translation
+
+Translate individual documents synchronously:
+
+```python
+import requests
+
+url = "https://<resource>.cognitiveservices.azure.com/translator/document:translate"
+params = {
+    'api-version': '2024-05-01',
+    'targetLanguage': 'de'
+}
+
+headers = {
+    'Ocp-Apim-Subscription-Key': '<your-key>'
+}
+
+with open('document.pdf', 'rb') as document:
+    files = {'document': document}
+    response = requests.post(url, params=params, headers=headers, files=files)
+
+with open('translated.pdf', 'wb') as output:
+    output.write(response.content)
+```
+
+### Supported Document Formats
+
+- **Text**: TXT, HTML, HTM, MARKDOWN, MD
+- **Documents**: DOCX, XLSX, PPTX, PDF
+- **Structured**: JSON, TSV, CSV, XML
+- **Localization**: XLIFF, TMX, XLF
+
+## Custom Translator
+
+Train custom translation models for domain-specific terminology:
+
+### Use Cases
+
+- Industry-specific terminology
+- Brand names and product terms
+- Legal and medical documents
+- Technical documentation
+- Consistent translation style
+
+### Training Process
+
+<Steps>
+  <Step title="Prepare Data">
+    Create parallel documents (source and target language pairs)
+  </Step>
+  
+  <Step title="Create Project">
+    Set up a project in Custom Translator portal
+  </Step>
+  
+  <Step title="Upload Documents">
+    Upload training, tuning, and testing documents
+  </Step>
+  
+  <Step title="Train Model">
+    Train a custom model on your data
+  </Step>
+  
+  <Step title="Test Model">
+    Evaluate model performance with test data
+  </Step>
+  
+  <Step title="Deploy Model">
+    Publish model for use via API
+  </Step>
+</Steps>
+
+### Using Custom Models
+
+```python
+# Use custom model in translation
+params = '&to=de&category=<your-category-id>'
+
+body = [{
+    'text': 'Technical term specific to our industry'
+}]
+
+response = requests.post(url, params=params, headers=headers, json=body)
+```
+
+### Dictionary Features
+
+Create phrase and sentence dictionaries for custom models:
+
+- **Phrase Dictionary**: Single-word or phrase translations
+- **Sentence Dictionary**: Complete sentence translations (always used)
+- Override base model translations
+- Ensure consistent terminology
+
+## Language Support
+
+Translator supports:
+
+- **100+ languages** for neural translation
+- **90+ languages** for text-to-speech
+- **20+ writing systems** for transliteration
+- **Endangered languages** preservation support
+
+### Popular Languages
+
+- English, Spanish, French, German, Italian
+- Chinese (Simplified & Traditional), Japanese, Korean
+- Arabic, Russian, Portuguese, Hindi
+- And 90+ more languages
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Global Communication">
+    - Translate customer emails and support tickets
+    - Localize marketing content
+    - Enable multilingual chat and messaging
+    - Translate social media posts
+  </Accordion>
+  
+  <Accordion title="Content Localization">
+    - Localize websites and applications
+    - Translate documentation and help content
+    - Localize e-learning materials
+    - Translate video subtitles
+  </Accordion>
+  
+  <Accordion title="Document Processing">
+    - Translate contracts and legal documents
+    - Localize technical manuals
+    - Translate research papers
+    - Process multilingual invoices
+  </Accordion>
+  
+  <Accordion title="E-commerce">
+    - Translate product descriptions
+    - Localize product catalogs
+    - Translate customer reviews
+    - Support international customers
+  </Accordion>
+</AccordionGroup>
+
+## API Versions
+
+### Text Translation v3 (Stable)
+
+- Real-time text translation
+- Language detection
+- Transliteration
+- Dictionary features
+- Widely adopted and stable
+
+### Text Translation 2025-10-01-preview
+
+- LLM-based translation models
+- Adaptive custom translation
+- Enhanced context understanding
+- Expanded request parameters
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-ai-translation-text
+    pip install azure-ai-translation-document
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Azure.AI.Translation.Text
+    dotnet add package Azure.AI.Translation.Document
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    Maven packages for text and document translation
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure-rest/ai-translation-text
+    npm install @azure-rest/ai-translation-document
+    ```
+  </Card>
+</CardGroup>
+
+## Input Requirements
+
+### Text Translation
+
+- **Maximum request size**: 50,000 characters
+- **Maximum array elements**: 100
+- **Request rate limits**: Varies by tier
+
+### Document Translation
+
+- **Maximum file size**: 40 MB per document
+- **Maximum batch size**: 1000 documents
+- **Total batch size**: 250 MB
+- **Maximum concurrent batches**: 5
+
+## Containers
+
+Run Translator on-premises or at the edge:
+
+- **Text Translation container**: Translate text offline
+- **Document Translation container**: Process documents locally
+- Maintain data privacy and compliance
+- Low-latency local processing
+
+## Pricing
+
+### Text Translation
+
+- **Free Tier (F0)**: 2M characters per month
+- **Standard Tier (S1)**: Pay per million characters
+- **Custom models**: Additional training and hosting costs
+
+### Document Translation
+
+- **Free Tier (F0)**: 2M characters per month
+- **Standard Tier (S1)**: Pay per million characters
+- Storage costs for source and target documents
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create a Translator resource in the Azure Portal
+  </Step>
+  
+  <Step title="Get Credentials">
+    Retrieve your subscription key and region
+  </Step>
+  
+  <Step title="Choose API">
+    Select text translation, document translation, or custom translator
+  </Step>
+  
+  <Step title="Make Requests">
+    Use REST API or SDK to translate content
+  </Step>
+</Steps>
+
+## Best Practices
+
+- Use language detection for unknown source languages
+- Batch multiple texts in single requests for efficiency
+- Implement caching for repeated translations
+- Use custom models for domain-specific content
+- Handle profanity based on your use case
+- Monitor translation quality and costs
+- Implement retry logic for transient failures
+
+## Regional Availability
+
+Translator is available globally in all Azure regions that support Cognitive Services.
+
+## Next Steps
+
+- [View Text Translation Quickstart](https://learn.microsoft.com/azure/ai-services/translator/quickstart-text)
+- [Learn about Document Translation](https://learn.microsoft.com/azure/ai-services/translator/document-translation/overview)
+- [Explore Custom Translator](https://learn.microsoft.com/azure/ai-services/translator/custom-translator/overview)
+- [View Language Support](https://learn.microsoft.com/azure/ai-services/translator/language-support)

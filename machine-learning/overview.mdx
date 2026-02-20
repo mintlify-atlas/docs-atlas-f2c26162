@@ -1,0 +1,159 @@
+---
+title: Azure Machine Learning Overview
+description: Learn about Azure Machine Learning resources, assets, and how to build, train, and deploy machine learning models at scale.
+---
+
+# Azure Machine Learning Overview
+
+Azure Machine Learning is a cloud service for accelerating and managing the machine learning project lifecycle. Machine learning professionals, data scientists, and engineers can use it to train and deploy models at scale, and to manage MLOps workflows.
+
+<Info>
+Azure Machine Learning provides a unified platform for the complete machine learning lifecycle, from data preparation through model deployment and monitoring.
+</Info>
+
+## Key Concepts
+
+Azure Machine Learning includes several resources and assets to enable you to perform your machine learning tasks:
+
+### Resources
+
+Setup or infrastructural resources needed to run a machine learning workflow:
+
+<CardGroup cols={3}>
+  <Card title="Workspace" icon="building" href="/machine-learning/concepts/workspace">
+    Top-level resource providing centralized place to work with all artifacts
+  </Card>
+  <Card title="Compute" icon="server" href="/machine-learning/concepts/compute">
+    Designated compute resources for training and inference
+  </Card>
+  <Card title="Datastore" icon="database">
+    Securely store connection information for data storage
+  </Card>
+</CardGroup>
+
+### Assets
+
+Versioned assets created and registered in your workspace:
+
+<CardGroup cols={2}>
+  <Card title="Models" icon="brain">
+    Trained machine learning models tracked and versioned
+  </Card>
+  <Card title="Environments" icon="box">
+    Encapsulation of software packages and settings
+  </Card>
+  <Card title="Data" icon="chart-line">
+    URIs and tables for training and inference
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/machine-learning/components/overview">
+    Reusable pipeline steps for ML workflows
+  </Card>
+</CardGroup>
+
+## Azure Machine Learning SDK
+
+The Python SDK v2 provides a programmatic interface to Azure Machine Learning:
+
+```python
+from azure.ai.ml import MLClient
+from azure.ai.ml.entities import Workspace
+from azure.identity import DefaultAzureCredential
+
+# Connect to your subscription
+subscription_id = "<SUBSCRIPTION_ID>"
+resource_group = "<RESOURCE_GROUP>"
+
+ml_client = MLClient(
+    DefaultAzureCredential(), 
+    subscription_id, 
+    resource_group
+)
+```
+
+## Azure CLI Extension
+
+The Azure CLI `ml` extension (v2) enables machine learning operations from the command line:
+
+```bash
+az login
+az account set --subscription <SUBSCRIPTION_ID>
+
+# Create a workspace
+az ml workspace create --file workspace.yml
+```
+
+## Machine Learning Workflow
+
+<Steps>
+  <Step title="Prepare Data">
+    Connect to datastores and create data assets for training
+  </Step>
+  <Step title="Train Models">
+    Submit training jobs to compute targets with your training script
+  </Step>
+  <Step title="Register Models">
+    Store and version trained models in the model registry
+  </Step>
+  <Step title="Deploy Models">
+    Create endpoints for real-time or batch inference
+  </Step>
+  <Step title="Monitor">
+    Track model performance and data drift in production
+  </Step>
+</Steps>
+
+## Development Environments
+
+Azure Machine Learning supports multiple development tools:
+
+<Tabs>
+  <Tab title="Studio">
+    Web-based interface for no-code and code-first experiences
+    - Notebooks for interactive development
+    - Automated ML for no-code model training
+    - Designer for drag-and-drop workflows
+  </Tab>
+  <Tab title="SDK">
+    Python SDK v2 for programmatic access
+    ```python
+    from azure.ai.ml import MLClient
+    from azure.ai.ml.entities import AmlCompute
+    ```
+  </Tab>
+  <Tab title="CLI">
+    Command-line interface for automation
+    ```bash
+    az ml job create --file job.yml
+    ```
+  </Tab>
+  <Tab title="VS Code">
+    Integrated development with the Azure Machine Learning extension
+  </Tab>
+</Tabs>
+
+## Storage Format Support
+
+Azure Machine Learning supports three types of storage formats for models:
+
+| Format | Description |
+|--------|-------------|
+| `custom_model` | Standard model format |
+| `mlflow_model` | MLflow packaged models with metadata |
+| `triton_model` | NVIDIA Triton inference models |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/machine-learning/quickstart">
+    Get started with Azure Machine Learning
+  </Card>
+  <Card title="Training" icon="graduation-cap" href="/machine-learning/training/overview">
+    Learn how to train models
+  </Card>
+  <Card title="Deployment" icon="cloud-arrow-up" href="/machine-learning/deployment/overview">
+    Deploy models to production
+  </Card>
+  <Card title="MLOps" icon="gears" href="/machine-learning/concepts/mlops">
+    Manage the model lifecycle
+  </Card>
+</CardGroup>

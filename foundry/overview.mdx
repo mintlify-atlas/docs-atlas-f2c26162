@@ -1,0 +1,149 @@
+---
+title: What is Microsoft Foundry?
+description: Learn about Microsoft Foundry, a unified Azure platform for enterprise AI operations, agents, models, and tools with built-in security and governance.
+---
+
+# What is Microsoft Foundry?
+
+Microsoft Foundry is a unified Azure platform-as-a-service offering for enterprise AI operations, model builders, and application development. This foundation combines production-grade infrastructure with friendly interfaces, enabling developers to focus on building applications rather than managing infrastructure.
+
+## Unified Platform for AI Development
+
+Microsoft Foundry unifies agents, models, and tools under a single management grouping with built-in enterprise-readiness capabilities including:
+
+- **Tracing and Monitoring**: Full observability into agent behavior and performance
+- **Evaluations**: Built-in tools to assess model and agent quality
+- **Enterprise Setup**: Customizable configurations for security and compliance
+- **Unified Management**: Single RBAC, networking, and policy control under one Azure resource provider namespace
+
+## Key Capabilities
+
+Microsoft Foundry provides developers with powerful capabilities to build production-ready AI applications:
+
+### Agents
+
+Build intelligent agents that can:
+- Make decisions and invoke tools
+- Participate in multi-agent workflows
+- Access enterprise knowledge through integrated tools
+- Operate with enterprise-grade security and governance
+
+### Models
+
+Access a comprehensive catalog of AI models:
+- **Azure OpenAI models**: GPT-4o, GPT-4, GPT-3.5 with fungible provisioned throughput
+- **Foundry Direct models**: DeepSeek, xAI, and other cutting-edge models
+- **Partner models**: Meta Llama, Cohere, Anthropic Claude, and more
+- **Community models**: 1900+ models from Hugging Face and other sources
+
+### Tools and Integrations
+
+Extend agent capabilities with built-in tools:
+- **Code Interpreter**: Execute Python code in sandboxed environments
+- **File Search**: Retrieve knowledge from uploaded documents
+- **Function Calling**: Define custom tools for your agents
+- **Azure AI Search**: Ground responses in your indexed data
+- **Azure Functions**: Integrate with enterprise systems and APIs
+
+## Microsoft Foundry API and SDKs
+
+The Microsoft Foundry API provides a consistent contract for working across different model providers. SDKs are available for:
+
+- **Python**: Full-featured SDK with agent and model support
+- **C#**: Enterprise-grade SDK for .NET applications
+- **JavaScript/TypeScript** (preview): Modern web development support
+- **Java** (preview): Support for Java-based applications
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+project = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential(),
+)
+```
+
+```csharp C#
+using Azure.AI.Projects;
+using Azure.Identity;
+
+string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+AIProjectClient projectClient = new AIProjectClient(new Uri(endpoint), new DefaultAzureCredential());
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+const project = new AIProjectClient(endpoint, new DefaultAzureCredential());
+```
+</CodeGroup>
+
+## Projects and Resource Isolation
+
+Foundry projects provide secure units of isolation and collaboration where:
+- Agents share file storage, thread storage, and search indexes
+- Data is isolated between projects
+- You can bring your own Azure resources for compliance and control
+- Each project acts as an independent workspace
+
+## Enterprise Features
+
+Microsoft Foundry is designed for enterprise workloads with:
+
+### Security and Compliance
+- Microsoft Entra ID authentication
+- Role-based access control (RBAC)
+- Network isolation with private endpoints
+- Customer-managed encryption keys
+- Content safety filters
+
+### Observability
+- Full conversation tracing
+- Application Insights integration
+- Performance metrics and monitoring
+- Evaluation and testing tools
+
+### Data Residency
+- Bring your own Azure Storage
+- Bring your own Azure Cosmos DB
+- Bring your own Azure AI Search
+- Data stays in your tenant and region
+
+## Pricing and Availability
+
+Microsoft Foundry is free to explore and use. You pay only for:
+- Model deployments and API calls
+- Azure resources you provision (Storage, Cosmos DB, etc.)
+- Specific features like Code Interpreter sessions
+
+Foundry is available in most regions where Azure AI services are available.
+
+## Getting Started
+
+To start building with Microsoft Foundry:
+
+1. [Create a Foundry project](/foundry/quickstart)
+2. [Deploy a model](/foundry/models/deployment)
+3. [Create your first agent](/foundry/agents/overview)
+4. [Explore the SDK](/foundry/sdk-overview)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Get started with Microsoft Foundry in minutes
+  </Card>
+  <Card title="Agents" icon="robot" href="/foundry/agents/overview">
+    Build intelligent agents with Foundry Agent Service
+  </Card>
+  <Card title="Models" icon="brain" href="/foundry/models/overview">
+    Explore the model catalog and deployments
+  </Card>
+  <Card title="SDK Overview" icon="code" href="/foundry/sdk-overview">
+    Learn about SDKs and endpoints
+  </Card>
+</CardGroup>

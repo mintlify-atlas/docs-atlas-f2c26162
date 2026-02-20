@@ -1,0 +1,585 @@
+---
+title: 'Python SDK'
+description: 'Python SDK reference for Azure AI Foundry and Azure AI services'
+---
+
+# Python SDK Overview
+
+The Python SDKs provide comprehensive access to Azure AI services including Foundry Local, Azure Machine Learning, and Azure AI Search. This guide covers installation, authentication, and usage examples.
+
+## Installation
+
+### Azure AI Foundry SDK
+
+Install the Azure AI Projects client library:
+
+<CodeGroup>
+```bash Foundry (Latest)
+pip install --pre azure-ai-projects
+pip install azure-identity openai
+```
+
+```bash Foundry Classic (Stable)
+pip install azure-ai-projects==1.0.0
+pip install openai azure-identity
+```
+</CodeGroup>
+
+### Foundry Local SDK
+
+```bash
+pip install foundry-local-sdk
+```
+
+### Azure AI Search
+
+```bash
+pip install azure-search-documents
+pip install azure-identity
+```
+
+### Azure Machine Learning
+
+```bash
+pip install azure-ai-ml
+pip install azure-identity
+```
+
+## Authentication
+
+All SDKs support Microsoft Entra ID authentication using `DefaultAzureCredential`:
+
+```python
+from azure.identity import DefaultAzureCredential
+
+credential = DefaultAzureCredential()
+```
+
+<Note>
+Ensure you're logged in with Azure CLI: `az login`
+</Note>
+
+## Azure AI Foundry
+
+### Project Client
+
+Connect to your Azure AI Foundry project:
+
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+
+project_client = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential()
+)
+```
+
+### Chat Completions
+
+Use the OpenAI-compatible client for model inference:
+
+```python
+# Get OpenAI client from project
+with project_client.get_openai_client() as openai_client:
+    response = openai_client.responses.create(
+        model="gpt-5.2",
+        input="What is the size of France in square miles?",
+    )
+    print(f"Response: {response.output_text}")
+```
+
+### List Connections
+
+Retrieve project connections:
+
+```python
+connections = project_client.connections.list()
+for connection in connections:
+    print(f"Connection: {connection.name}")
+```
+
+### Enable Tracing
+
+Enable application tracing for debugging:
+
+```python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+project_client = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential()
+)
+
+# Enable tracing
+project_client.telemetry.enable(
+    connection_string="your-app-insights-connection-string"
+)
+```
+
+## Foundry Local
+
+### FoundryLocalManager
+
+Manage local AI models:
+
+```python
+from foundry_local import FoundryLocalManager
+
+# Initialize manager (starts service if not running)
+manager = FoundryLocalManager()
+manager.start_service()
+
+# List available models
+catalog = manager.list_catalog_models()
+print(f"Available models: {len(catalog)}")
+
+# Download and load a model
+alias = "qwen2.5-0.5b"
+model_info = manager.download_model(alias)
+model_info = manager.load_model(alias)
+
+print(f"Loaded model: {model_info.id}")
+print(f"Device: {model_info.device_type}")
+print(f"Execution provider: {model_info.execution_provider}")
+```
+
+### Model Information
+
+Access detailed model metadata:
+
+```python
+# Get specific model info
+model = manager.get_model_info("qwen2.5-0.5b")
+
+if model:
+    print(f"Model ID: {model.id}")
+    print(f"Alias: {model.alias}")
+    print(f"Version: {model.version}")
+    print(f"Task: {model.task}")
+    print(f"File size: {model.file_size_mb} MB")
+    print(f"Supports tool calling: {model.supports_tool_calling}")
+    print(f"License: {model.license}")
+```
+
+### OpenAI Integration
+
+Use Foundry Local with the OpenAI SDK:
+
+```python
+import openai
+from foundry_local import FoundryLocalManager
+
+alias = "qwen2.5-0.5b"
+
+# Initialize Foundry Local
+manager = FoundryLocalManager(alias)
+
+# Configure OpenAI client for local inference
+client = openai.OpenAI(
+    base_url=manager.endpoint,
+    api_key=manager.api_key
+)
+
+# Stream chat completion
+stream = client.chat.completions.create(
+    model=manager.get_model_info(alias).id,
+    messages=[{"role": "user", "content": "Why is the sky blue?"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+### Cache Management
+
+```python
+# Get cache location
+cache_path = manager.get_cache_location()
+print(f"Model cache: {cache_path}")
+
+# List cached models
+cached = manager.list_cached_models()
+for model in cached:
+    print(f"Cached: {model.alias} ({model.file_size_mb} MB)")
+
+# List loaded models
+loaded = manager.list_loaded_models()
+for model in loaded:
+    print(f"Loaded: {model.alias}")
+
+# Unload a model
+manager.unload_model(alias)
+```
+
+## Azure AI Search
+
+### Search Client
+
+Connect to Azure AI Search:
+
+```python
+from azure.search.documents import SearchClient
+from azure.identity import DefaultAzureCredential
+
+search_client = SearchClient(
+    endpoint="https://<search-service>.search.windows.net",
+    index_name="your-index",
+    credential=DefaultAzureCredential()
+)
+```
+
+### Full-Text Search
+
+```python
+results = search_client.search(
+    search_text="Phoenix urban development",
+    select=["id", "page_chunk", "page_number"],
+    top=5
+)
+
+for result in results:
+    print(f"Score: {result['@search.score']}")
+    print(f"Content: {result['page_chunk']}")
+    print(f"Page: {result['page_number']}\n")
+```
+
+### Vector Search
+
+```python
+from azure.search.documents.models import VectorizedQuery
+
+# Generate embedding (using Azure OpenAI)
+query_vector = generate_embedding("Phoenix metropolitan area")  # Your embedding function
+
+vector_query = VectorizedQuery(
+    vector=query_vector,
+    k_nearest_neighbors=5,
+    fields="page_embedding_text_3_large"
+)
+
+results = search_client.search(
+    search_text=None,
+    vector_queries=[vector_query],
+    select=["id", "page_chunk", "page_number"]
+)
+
+for result in results:
+    print(f"Content: {result['page_chunk']}")
+```
+
+### Hybrid Search
+
+Combine full-text and vector search:
+
+```python
+results = search_client.search(
+    search_text="Phoenix urban grid",
+    vector_queries=[vector_query],
+    select=["id", "page_chunk", "page_number"],
+    top=5
+)
+
+for result in results:
+    print(f"Hybrid score: {result['@search.score']}")
+    print(f"Content: {result['page_chunk']}\n")
+```
+
+### Upload Documents
+
+```python
+from azure.search.documents import SearchClient
+
+documents = [
+    {
+        "id": "doc1",
+        "page_chunk": "Phoenix is a major city in Arizona.",
+        "page_number": 104
+    },
+    {
+        "id": "doc2",
+        "page_chunk": "The Phoenix metropolitan area includes Glendale.",
+        "page_number": 105
+    }
+]
+
+result = search_client.upload_documents(documents=documents)
+print(f"Uploaded {len(result)} documents")
+```
+
+## Azure Machine Learning
+
+### ML Client
+
+Connect to Azure ML workspace:
+
+```python
+from azure.ai.ml import MLClient
+from azure.identity import DefaultAzureCredential
+
+ml_client = MLClient(
+    credential=DefaultAzureCredential(),
+    subscription_id="your-subscription-id",
+    resource_group_name="your-resource-group",
+    workspace_name="your-workspace"
+)
+```
+
+### Register Model
+
+```python
+from azure.ai.ml.entities import Model
+from azure.ai.ml.constants import AssetTypes
+
+model = Model(
+    name="my-model",
+    path="./model",
+    type=AssetTypes.MLFLOW_MODEL,
+    description="My trained model"
+)
+
+registered_model = ml_client.models.create_or_update(model)
+print(f"Registered model: {registered_model.name}:{registered_model.version}")
+```
+
+### Create Online Endpoint
+
+```python
+from azure.ai.ml.entities import ManagedOnlineEndpoint
+
+endpoint = ManagedOnlineEndpoint(
+    name="my-endpoint",
+    description="Production endpoint",
+    auth_mode="key"
+)
+
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+print(f"Created endpoint: {endpoint.name}")
+```
+
+### Deploy Model
+
+```python
+from azure.ai.ml.entities import ManagedOnlineDeployment, CodeConfiguration
+
+deployment = ManagedOnlineDeployment(
+    name="my-deployment",
+    endpoint_name="my-endpoint",
+    model=registered_model,
+    instance_type="Standard_DS3_v2",
+    instance_count=1,
+    code_configuration=CodeConfiguration(
+        code="./src",
+        scoring_script="score.py"
+    )
+)
+
+ml_client.online_deployments.begin_create_or_update(deployment).result()
+print(f"Deployed model to: {deployment.name}")
+```
+
+### Submit Training Job
+
+```python
+from azure.ai.ml import command
+from azure.ai.ml.entities import Environment
+
+job = command(
+    code="./src",
+    command="python train.py --epochs 10",
+    environment=Environment(
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest"
+    ),
+    compute="cpu-cluster",
+    display_name="training-job"
+)
+
+returned_job = ml_client.jobs.create_or_update(job)
+print(f"Job submitted: {returned_job.name}")
+print(f"Status: {returned_job.status}")
+```
+
+### Monitor Job
+
+```python
+import time
+
+job_name = returned_job.name
+
+while True:
+    job = ml_client.jobs.get(job_name)
+    print(f"Status: {job.status}")
+    
+    if job.status in ["Completed", "Failed", "Canceled"]:
+        break
+    
+    time.sleep(30)
+
+if job.status == "Completed":
+    print("Job completed successfully!")
+else:
+    print(f"Job ended with status: {job.status}")
+```
+
+## Azure AI Services
+
+### Speech to Text
+
+```python
+import azure.cognitiveservices.speech as speechsdk
+
+speech_config = speechsdk.SpeechConfig(
+    subscription="your-key",
+    region="your-region"
+)
+
+audio_config = speechsdk.audio.AudioConfig(filename="audio.wav")
+
+speech_recognizer = speechsdk.SpeechRecognizer(
+    speech_config=speech_config,
+    audio_config=audio_config
+)
+
+result = speech_recognizer.recognize_once()
+if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+    print(f"Recognized: {result.text}")
+```
+
+### Text to Speech
+
+```python
+speech_config = speechsdk.SpeechConfig(
+    subscription="your-key",
+    region="your-region"
+)
+
+speech_config.speech_synthesis_voice_name = "en-US-AriaNeural"
+
+audio_config = speechsdk.audio.AudioOutputConfig(filename="output.wav")
+
+speech_synthesizer = speechsdk.SpeechSynthesizer(
+    speech_config=speech_config,
+    audio_config=audio_config
+)
+
+result = speech_synthesizer.speak_text_async("Hello, world!").get()
+if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+    print("Speech synthesized successfully")
+```
+
+### Content Safety
+
+```python
+from azure.ai.contentsafety import ContentSafetyClient
+from azure.ai.contentsafety.models import AnalyzeTextOptions
+from azure.identity import DefaultAzureCredential
+
+client = ContentSafetyClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com",
+    credential=DefaultAzureCredential()
+)
+
+request = AnalyzeTextOptions(text="Sample text to analyze")
+response = client.analyze_text(request)
+
+print(f"Hate: {response.hate_result.severity}")
+print(f"Violence: {response.violence_result.severity}")
+```
+
+## Error Handling
+
+Handle common errors gracefully:
+
+```python
+from azure.core.exceptions import (
+    HttpResponseError,
+    ServiceRequestError,
+    ResourceNotFoundError
+)
+
+try:
+    result = search_client.search(search_text="query")
+except ResourceNotFoundError:
+    print("Index not found")
+except HttpResponseError as e:
+    print(f"HTTP error: {e.status_code} - {e.message}")
+except ServiceRequestError:
+    print("Network error or service unavailable")
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Managed Identity">
+    In production, use managed identity instead of API keys:
+    
+    ```python
+    from azure.identity import ManagedIdentityCredential
+    
+    credential = ManagedIdentityCredential()
+    ```
+  </Accordion>
+  
+  <Accordion title="Connection Pooling">
+    Reuse client instances for better performance:
+    
+    ```python
+    # Good: Reuse client
+    client = SearchClient(...)
+    for query in queries:
+        results = client.search(query)
+    
+    # Bad: Create new client each time
+    for query in queries:
+        client = SearchClient(...)
+        results = client.search(query)
+    ```
+  </Accordion>
+  
+  <Accordion title="Async Operations">
+    Use async clients for better concurrency:
+    
+    ```python
+    from azure.search.documents.aio import SearchClient
+    import asyncio
+    
+    async def search_async():
+        async with SearchClient(...) as client:
+            results = await client.search("query")
+            async for result in results:
+                print(result)
+    
+    asyncio.run(search_async())
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Package References
+
+| Package | PyPI | Documentation |
+|---------|------|---------------|
+| azure-ai-projects | [Link](https://pypi.org/project/azure-ai-projects/) | [Docs](/python/api/overview/azure/ai-projects-readme) |
+| foundry-local-sdk | [Link](https://pypi.org/project/foundry-local-sdk/) | [Docs](https://aka.ms/fl-python-sdk) |
+| azure-search-documents | [Link](https://pypi.org/project/azure-search-documents/) | [Docs](/python/api/overview/azure/search-documents-readme) |
+| azure-ai-ml | [Link](https://pypi.org/project/azure-ai-ml/) | [Docs](/python/api/overview/azure/ai-ml-readme) |
+| azure-cognitiveservices-speech | [Link](https://pypi.org/project/azure-cognitiveservices-speech/) | [Docs](/python/api/overview/azure/cognitiveservices-speech-readme) |
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="REST API Reference" icon="code" href="/api/foundry">
+    Foundry REST API documentation
+  </Card>
+  <Card title="JavaScript SDK" icon="js" href="/sdk/javascript">
+    JavaScript and TypeScript SDK
+  </Card>
+  <Card title=".NET SDK" icon="code" href="/sdk/dotnet">
+    C# and .NET SDK reference
+  </Card>
+  <Card title="Azure CLI" icon="terminal" href="https://docs.microsoft.com/cli/azure/">
+    Command-line tools
+  </Card>
+</CardGroup>

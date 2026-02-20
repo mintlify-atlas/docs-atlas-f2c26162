@@ -1,0 +1,400 @@
+---
+title: Microsoft Foundry SDKs and Endpoints
+description: Learn about Microsoft Foundry SDKs, endpoints, and how to choose the right SDK for your AI application development needs.
+---
+
+# Microsoft Foundry SDKs and Endpoints
+
+Microsoft Foundry provides unified access to models, agents, and tools through multiple SDKs and endpoints. This guide helps you choose the right SDK for your scenario.
+
+## SDK Overview
+
+| SDK | Purpose | Endpoint |
+|-----|---------|----------|
+| **Foundry SDK** | Foundry-specific capabilities with OpenAI-compatible interfaces | `https://<resource-name>.services.ai.azure.com/api/projects/<project-name>` |
+| **OpenAI SDK** | Latest OpenAI models with full OpenAI API surface | `https://<resource-name>.openai.azure.com/openai/v1` |
+| **Foundry Tools SDKs** | Prebuilt AI services (Vision, Speech, Language, etc.) | Service-specific endpoints |
+| **Agent Framework** | Multi-agent orchestration in code (cloud-agnostic) | Uses project endpoint via Foundry SDK |
+
+## Choosing Your SDK
+
+<Tabs>
+  <Tab title="Foundry SDK">
+    Use when building apps with:
+    - Agents and agent orchestration
+    - Evaluations and testing
+    - Foundry-specific features
+    - Unified access to multiple services
+  </Tab>
+  
+  <Tab title="OpenAI SDK">
+    Use when you need:
+    - Maximum OpenAI compatibility
+    - Direct access to Azure OpenAI models
+    - Latest OpenAI features
+    - Existing OpenAI SDK code
+  </Tab>
+  
+  <Tab title="Foundry Tools SDKs">
+    Use when working with:
+    - Computer Vision
+    - Speech services
+    - Content Safety
+    - Document Intelligence
+    - Language services
+  </Tab>
+  
+  <Tab title="Agent Framework">
+    Use when building:
+    - Multi-agent systems in code
+    - Local orchestration workflows
+    - Cloud-agnostic applications
+    - Complex agent coordination
+  </Tab>
+</Tabs>
+
+## Foundry SDK
+
+The Foundry SDK connects to a single project endpoint that provides access to all Foundry capabilities.
+
+### Installation
+
+<CodeGroup>
+```bash Python
+# Stable (Foundry classic)
+pip install openai azure-identity azure-ai-projects==1.0.0
+
+# Preview (Foundry new)
+pip install --pre azure-ai-projects azure-identity openai
+```
+
+```bash C#
+# Stable (Foundry classic)
+dotnet add package Azure.Identity
+dotnet add package Azure.AI.Projects
+dotnet add package Azure.AI.Agents.Persistent
+
+# Preview (Foundry new)
+dotnet add package Azure.AI.Projects --prerelease
+dotnet add package Azure.AI.Projects.OpenAI --prerelease
+dotnet add package Azure.Identity
+```
+
+```bash TypeScript
+# Stable (Foundry classic)
+npm install @azure/ai-projects @azure/identity
+
+# Preview (Foundry new)
+npm install @azure/ai-projects@beta @azure/identity dotenv
+```
+
+```bash Java
+# Add to pom.xml (Preview)
+<dependency>
+  <groupId>com.azure</groupId>
+  <artifactId>azure-ai-projects</artifactId>
+  <version>1.0.0-beta.3</version>
+</dependency>
+```
+</CodeGroup>
+
+### Authentication
+
+The Foundry SDK uses Microsoft Entra ID authentication via `DefaultAzureCredential`:
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+project = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential(),
+)
+```
+
+```csharp C#
+using Azure.AI.Projects;
+using Azure.Identity;
+
+string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+AIProjectClient projectClient = new AIProjectClient(
+    new Uri(endpoint),
+    new DefaultAzureCredential()
+);
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+const project = new AIProjectClient(endpoint, new DefaultAzureCredential());
+```
+
+```java Java
+import com.azure.ai.projects.ProjectsClient;
+import com.azure.ai.projects.ProjectsClientBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+
+String endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+
+ProjectsClient projectClient = new ProjectsClientBuilder()
+    .credential(new DefaultAzureCredentialBuilder().build())
+    .endpoint(endpoint)
+    .buildClient();
+```
+</CodeGroup>
+
+### Using the Foundry SDK
+
+The SDK exposes two client types:
+
+#### Project Client
+
+Use for Foundry-native operations like listing connections and retrieving project properties.
+
+<CodeGroup>
+```python Python
+# List connections
+connections = project.connections.list()
+for connection in connections:
+    print(f"Connection: {connection.name}")
+
+# Get project properties
+properties = project.properties.get()
+print(f"Project: {properties.name}")
+```
+
+```csharp C#
+// List connections
+var connections = projectClient.ListConnections();
+foreach (var connection in connections)
+{
+    Console.WriteLine($"Connection: {connection.Name}");
+}
+```
+</CodeGroup>
+
+#### OpenAI-Compatible Client
+
+Use for agents, evaluations, and model inference.
+
+<CodeGroup>
+```python Python
+# Get OpenAI client from project
+models = project.get_openai_client(api_version="2024-10-21")
+
+# Create chat completion
+response = models.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Explain quantum computing in simple terms"},
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+
+```csharp C#
+ClientConnection connection = projectClient.GetConnection(typeof(AzureOpenAIClient).FullName!);
+if (!connection.TryGetLocatorAsUri(out Uri uri) || uri is null)
+{
+    throw new InvalidOperationException("Invalid URI.");
+}
+uri = new Uri($"https://{uri.Host}");
+
+AzureOpenAIClient azureOpenAIClient = new AzureOpenAIClient(uri, new DefaultAzureCredential());
+ChatClient chatClient = azureOpenAIClient.GetChatClient("gpt-4o");
+
+ChatCompletion result = chatClient.CompleteChat("Explain quantum computing in simple terms");
+Console.WriteLine(result.Content[0].Text);
+```
+</CodeGroup>
+
+### What You Can Do with the Foundry SDK
+
+- Access Foundry Models (Azure OpenAI and Foundry Direct models)
+- Create and manage agents
+- Run cloud evaluations
+- Enable application tracing
+- Fine-tune models
+- Get endpoints and keys for Foundry Tools
+
+## OpenAI SDK
+
+Use the OpenAI SDK for direct access to Azure OpenAI models with full OpenAI API compatibility.
+
+### Installation and Usage
+
+<CodeGroup>
+```python Python
+from openai import OpenAI
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+)
+
+client = OpenAI(
+    base_url="https://<resource-name>.openai.azure.com/openai/v1/",
+    api_key=token_provider,
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "What is the speed of light?"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+```csharp C#
+using Azure.Identity;
+using OpenAI;
+using OpenAI.Chat;
+using System.ClientModel.Primitives;
+
+const string endpoint = "https://<resource-name>.openai.azure.com/openai/v1/";
+const string modelDeploymentName = "gpt-4o";
+
+BearerTokenPolicy tokenPolicy = new(
+    new DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default");
+
+OpenAIClient openAIClient = new(
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri(endpoint),
+    });
+
+ChatClient chatClient = openAIClient.GetChatClient(modelDeploymentName);
+ChatCompletion completion = await chatClient.CompleteChatAsync(
+    [
+        new SystemChatMessage("You are a helpful assistant."),
+        new UserChatMessage("What is the speed of light?")
+    ]);
+
+Console.WriteLine(completion.Content[0].Text);
+```
+
+```typescript TypeScript
+import { AzureOpenAI } from "openai";
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+
+const endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
+const scope = "https://cognitiveservices.azure.com/.default";
+const azureADTokenProvider = getBearerTokenProvider(new DefaultAzureCredential(), scope);
+
+const client = new AzureOpenAI({ azureADTokenProvider, deployment: "gpt-4o", apiVersion: "2024-04-01-preview" });
+
+const result = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+        { role: "system", content: "You are a helpful assistant" },
+        { role: "user", content: "What is the speed of light?" },
+    ],
+});
+
+console.log(result.choices[0].message.content);
+```
+</CodeGroup>
+
+## Foundry Tools SDKs
+
+Foundry Tools (formerly Azure AI Services) provide specialized AI capabilities through dedicated SDKs.
+
+### Endpoints by Service
+
+| Service | Endpoint Format |
+|---------|----------------|
+| Computer Vision, Language, Translation | `https://<resource-name>.cognitiveservices.azure.com/` |
+| Speech to Text | `https://<region>.stt.speech.microsoft.com` |
+| Text to Speech | `https://<region>.tts.speech.microsoft.com` |
+| Text Translation | `https://api.cognitive.microsofttranslator.com/` |
+
+### Example: Content Safety
+
+<CodeGroup>
+```python Python
+from azure.ai.contentsafety import ContentSafetyClient
+from azure.identity import DefaultAzureCredential
+
+client = ContentSafetyClient(
+    endpoint="https://<resource-name>.cognitiveservices.azure.com/",
+    credential=DefaultAzureCredential()
+)
+
+result = client.analyze_text(
+    text="Sample text to analyze"
+)
+print(result)
+```
+
+```csharp C#
+using Azure.AI.ContentSafety;
+using Azure.Identity;
+
+var endpoint = "https://<resource-name>.cognitiveservices.azure.com/";
+var client = new ContentSafetyClient(new Uri(endpoint), new DefaultAzureCredential());
+
+var result = client.AnalyzeText("Sample text to analyze");
+Console.WriteLine(result.Value);
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Authentication Errors
+
+If you see `DefaultAzureCredential failed to retrieve a token`:
+
+1. **Verify Azure CLI is authenticated**:
+   ```bash
+   az account show
+   az login  # if not logged in
+   ```
+
+2. **Check RBAC role assignment**:
+   - Confirm you have at least the **Azure AI User** role on the Foundry project
+
+3. **For managed identity in production**:
+   - Ensure the managed identity has the appropriate role assigned
+
+### Endpoint Configuration Errors
+
+If you see `Connection refused` or `404 Not Found`:
+
+- Verify resource and project names match your deployment
+- Check endpoint URL format
+- For custom subdomains, replace `<resource-name>` with your custom subdomain
+
+### SDK Version Mismatches
+
+If code samples fail with `AttributeError` or `ModuleNotFoundError`:
+
+- Check SDK version: `pip show azure-ai-projects` (Python)
+- Verify you're using the correct SDK version for your portal (2.x for new, 1.x for classic)
+- Reinstall with correct version flags
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/foundry/quickstart">
+    Build your first Foundry application
+  </Card>
+  <Card title="Agents" icon="robot" href="/foundry/agents/overview">
+    Create intelligent agents
+  </Card>
+  <Card title="Models" icon="brain" href="/foundry/models/overview">
+    Explore available models
+  </Card>
+  <Card title="Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Extend agent capabilities
+  </Card>
+</CardGroup>

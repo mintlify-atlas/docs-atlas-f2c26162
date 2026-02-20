@@ -1,0 +1,310 @@
+---
+title: Azure Machine Learning Workspace
+description: Learn about Azure Machine Learning workspaces, how to organize them, and manage access for your team.
+---
+
+# What is an Azure Machine Learning Workspace?
+
+Workspaces are places to collaborate with colleagues to create machine learning artifacts and group related work. They provide a centralized environment for experiments, jobs, datasets, models, components, and inference endpoints.
+
+<Info>
+The workspace is the top-level resource for Azure Machine Learning, keeping a history of all jobs, logs, metrics, output, and script snapshots.
+</Info>
+
+## Tasks Performed Within a Workspace
+
+For machine learning teams, the workspace organizes the following activities:
+
+<CardGroup cols={2}>
+  <Card title="Create Jobs" icon="play">
+    Training runs to build models, grouped into experiments for metric comparison
+  </Card>
+  <Card title="Author Pipelines" icon="diagram-project">
+    Reusable workflows for training and retraining models
+  </Card>
+  <Card title="Register Data Assets" icon="database">
+    Manage data used for model training and pipeline creation
+  </Card>
+  <Card title="Register Models" icon="cube">
+    Version and track models ready for deployment
+  </Card>
+  <Card title="Create Endpoints" icon="plug">
+    Deploy registered models for real-time or batch inference
+  </Card>
+  <Card title="Manage Compute" icon="server">
+    Configure compute targets for running experiments
+  </Card>
+</CardGroup>
+
+## Workspace Components
+
+### Resource Configurations
+
+Workspaces host the following resource configurations:
+
+<Tabs>
+  <Tab title="Compute Targets">
+    Run experiments and training jobs:
+    - **Compute instances**: Development workstations
+    - **Compute clusters**: Scalable training infrastructure
+    - **Serverless compute**: On-demand compute without management
+    - **Inference clusters**: AKS for model deployment
+  </Tab>
+  <Tab title="Datastores">
+    Define connections to data sources:
+    - Azure Blob Storage
+    - Azure File Share
+    - Azure Data Lake Storage Gen2
+    - Azure SQL Database
+  </Tab>
+  <Tab title="Security Settings">
+    Configure workspace security:
+    - Network isolation with VNets
+    - Identity and access control (RBAC)
+    - Customer-managed encryption keys
+    - Private endpoints
+  </Tab>
+</Tabs>
+
+## Organizing Workspaces
+
+For team leads and administrators, workspaces serve as containers for access management, cost management, and data isolation.
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Role-Based Access Control">
+    Manage permissions between users with predefined roles:
+    - **Owner**: Full workspace access including role assignment
+    - **Contributor**: Create and manage resources except role assignment
+    - **Reader**: View workspace resources only
+    - **Custom roles**: Define specific permissions for your needs
+    
+    ```bash
+    az role assignment create \
+      --assignee user@example.com \
+      --role "AzureML Data Scientist" \
+      --scope /subscriptions/<subscription-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<workspace>
+    ```
+  </Accordion>
+  
+  <Accordion title="Assign Access to User Groups">
+    Use Microsoft Entra user groups instead of individual users:
+    - Simplifies permission management
+    - Consistent access across resources
+    - Easier onboarding/offboarding
+  </Accordion>
+  
+  <Accordion title="One Workspace Per Project">
+    Limit to one project per workspace for:
+    - Project-level cost reporting
+    - Scoped datastore configuration
+    - Better resource organization
+    - Clear ownership boundaries
+  </Accordion>
+  
+  <Accordion title="Share Azure Resources">
+    Share associated resources between workspaces:
+    - Storage accounts
+    - Key Vaults
+    - Application Insights
+    - Container Registries
+    
+    Reduces repetitive setup and infrastructure costs.
+  </Accordion>
+  
+  <Accordion title="Enable Self-Service">
+    IT admins can:
+    1. Precreate and secure associated resources
+    2. Grant appropriate RBAC roles to data scientists
+    3. Allow teams to create workspaces independently
+    
+    Balances governance with team autonomy.
+  </Accordion>
+  
+  <Accordion title="Use Hub Workspaces">
+    Group multiple project workspaces with shared:
+    - Security settings and connections
+    - Compute resources
+    - Centralized governance
+    
+    Hub workspaces work with both Azure ML studio and Microsoft Foundry.
+  </Accordion>
+</AccordionGroup>
+
+## Associated Azure Resources
+
+When you create a workspace, Azure Machine Learning automatically provisions these resources:
+
+| Resource | Purpose |
+|----------|----------|
+| **Azure Storage Account** | Stores job logs, notebooks, and uploaded data. Default datastore for workspace. |
+| **Azure Container Registry** | Stores Docker images for custom environments. Created on-demand when building images. |
+| **Azure Application Insights** | Monitors and collects diagnostic information from inference endpoints. |
+| **Azure Key Vault** | Stores secrets, connection strings, and keys used by compute and datastores. |
+
+<Warning>
+**Storage Account Limitations**
+
+You cannot use:
+- BlobStorage accounts
+- Premium storage accounts (Premium_LRS/Premium_GRS)
+- Accounts with hierarchical namespace enabled
+
+You can attach premium or hierarchical namespace storage as additional datastores.
+</Warning>
+
+## How Content is Stored
+
+The workspace keeps a history of all training runs with:
+
+- **Logs**: Console output and error messages
+- **Metrics**: Tracked numeric values and visualizations
+- **Output**: Model files and artifacts
+- **Lineage metadata**: Dataset versions and relationships
+- **Script snapshots**: Code used for each run
+
+Artifacts and metadata are stored in the workspace and associated Azure resources.
+
+## Create a Workspace
+
+Multiple methods are available for workspace creation:
+
+<Tabs>
+  <Tab title="Azure ML Studio">
+    Quick creation with default settings:
+    1. Navigate to [ml.azure.com](https://ml.azure.com)
+    2. Select **Create workspace**
+    3. Provide name, subscription, and resource group
+    4. Select **Create**
+  </Tab>
+  
+  <Tab title="Python SDK">
+    ```python
+    from azure.ai.ml import MLClient
+    from azure.ai.ml.entities import Workspace
+    from azure.identity import DefaultAzureCredential
+    
+    ws = Workspace(
+        name="my-workspace",
+        location="eastus",
+        display_name="My ML Workspace",
+        description="Production workspace for ML team",
+        tags={"environment": "production", "team": "ml-ops"}
+    )
+    
+    ml_client = MLClient(
+        DefaultAzureCredential(),
+        subscription_id="<subscription-id>",
+        resource_group="<resource-group>"
+    )
+    
+    ml_client.workspaces.begin_create(ws).result()
+    ```
+  </Tab>
+  
+  <Tab title="Azure CLI">
+    ```bash
+    az ml workspace create \
+      --name my-workspace \
+      --resource-group my-rg \
+      --location eastus \
+      --display-name "My ML Workspace" \
+      --tags environment=production team=ml-ops
+    ```
+  </Tab>
+  
+  <Tab title="ARM Template">
+    ```json
+    {
+      "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+      "resources": [
+        {
+          "type": "Microsoft.MachineLearningServices/workspaces",
+          "apiVersion": "2023-04-01",
+          "name": "my-workspace",
+          "location": "eastus",
+          "properties": {
+            "friendlyName": "My ML Workspace",
+            "description": "Production workspace"
+          }
+        }
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Workspace Subresources
+
+Compute clusters and instances create additional subresources:
+
+- **Virtual Machines**: Provide computing power
+- **Load Balancer**: Manages traffic (even when stopped)
+- **Virtual Network**: Enable resource communication
+- **Bandwidth**: Charges for outbound data transfer
+
+<Note>
+These subresources are managed automatically by Azure Machine Learning.
+</Note>
+
+## Management Tools
+
+Interact with your workspace using:
+
+<CardGroup cols={2}>
+  <Card title="Azure Portal" icon="window">
+    Full Azure resource management
+  </Card>
+  <Card title="ML Studio" icon="desktop">
+    ML-specific interface at ml.azure.com
+  </Card>
+  <Card title="Python SDK" icon="python">
+    Programmatic workspace access
+  </Card>
+  <Card title="Azure CLI" icon="terminal">
+    Command-line automation
+  </Card>
+  <Card title="VS Code Extension" icon="code">
+    Integrated development experience
+  </Card>
+  <Card title="REST API" icon="globe">
+    Direct API integration
+  </Card>
+</CardGroup>
+
+## Cost Management
+
+<Accordion title="Understanding Workspace Costs">
+  Workspace costs come from:
+  
+  1. **Compute resources**: VMs for training and inference
+  2. **Storage**: Blob storage for data and models
+  3. **Networking**: Private Link, VNet integration
+  4. **Monitoring**: Application Insights and Log Analytics
+  
+  To monitor costs:
+  ```bash
+  az consumption usage list \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    | jq '[.[] | select(.instanceName | contains("ml-workspace"))]'
+  ```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Your Workspace" icon="plus" href="/machine-learning/quickstart">
+    Follow the quickstart guide
+  </Card>
+  <Card title="Compute Targets" icon="server" href="/machine-learning/concepts/compute">
+    Learn about compute resources
+  </Card>
+  <Card title="Security" icon="shield">
+    Configure workspace security settings
+  </Card>
+  <Card title="Hub Workspaces" icon="sitemap">
+    Explore enterprise workspace organization
+  </Card>
+</CardGroup>

@@ -1,0 +1,171 @@
+---
+title: Create a Knowledge Base
+description: Set up a knowledge base to orchestrate agentic retrieval across multiple knowledge sources.
+---
+
+# Create a Knowledge Base
+
+A knowledge base orchestrates agentic retrieval by connecting to an LLM for query planning and one or more knowledge sources for data retrieval.
+
+## Prerequisites
+
+- Azure AI Search service
+- Azure OpenAI resource with gpt-4o, gpt-4.1, or gpt-5 deployment
+- At least one knowledge source
+- Semantic ranker enabled
+
+## Knowledge Base Structure
+
+```json
+{
+  "name": "customer-support-kb",
+  "description": "Customer support knowledge base",
+  "knowledgeSources": [
+    {"name": "product-docs"},
+    {"name": "support-articles"},
+    {"name": "sharepoint-policies"}
+  ],
+  "llmConnection": {
+    "resourceId": "/subscriptions/.../Microsoft.CognitiveServices/accounts/my-openai",
+    "deploymentName": "gpt-4o"
+  },
+  "retrievalReasoningEffort": "low"
+}
+```
+
+## Configuration Options
+
+### LLM Connection
+
+Specify Azure OpenAI resource for query planning:
+
+```json
+{
+  "llmConnection": {
+    "resourceId": "/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.CognitiveServices/accounts/{name}",
+    "deploymentName": "gpt-4o"
+  }
+}
+```
+
+**Supported models**: gpt-4o, gpt-4.1, gpt-5 series
+
+### Retrieval Reasoning Effort
+
+Control LLM processing level:
+
+- **minimal**: No LLM, direct search only
+- **low**: Basic query planning
+- **medium**: Full query planning and expansion
+
+### Knowledge Sources
+
+Reference one or more knowledge sources by name:
+
+```json
+{
+  "knowledgeSources": [
+    {"name": "indexed-docs"},
+    {"name": "remote-sharepoint"},
+    {"name": "web-search"}
+  ]
+}
+```
+
+## Create Using REST API
+
+```http
+PUT https://{search-service}.search.windows.net/knowledgebases/{kb-name}?api-version=2025-11-01-preview
+Content-Type: application/json
+api-key: {admin-key}
+
+{
+  "name": "my-knowledge-base",
+  "description": "Main knowledge base",
+  "knowledgeSources": [
+    {"name": "docs-source"}
+  ],
+  "llmConnection": {
+    "resourceId": "{openai-resource-id}",
+    "deploymentName": "gpt-4o"
+  },
+  "retrievalReasoningEffort": "low"
+}
+```
+
+## Query the Knowledge Base
+
+```http
+POST https://{search-service}.search.windows.net/knowledgebases/{kb-name}/retrieve?api-version=2025-11-01-preview
+Content-Type: application/json
+api-key: {admin-key}
+
+{
+  "query": "What is the return policy for electronics?",
+  "messageHistory": [
+    {
+      "role": "user",
+      "content": "I bought a laptop last week"
+    },
+    {
+      "role": "assistant",
+      "content": "I can help you with information about your laptop purchase"
+    }
+  ]
+}
+```
+
+## Response Structure
+
+```json
+{
+  "content": "Based on our return policy...",
+  "references": [
+    {
+      "referenceId": "ref1",
+      "title": "Electronics Return Policy",
+      "snippet": "Electronics can be returned within 30 days..."
+    }
+  ],
+  "activityLog": {
+    "queryPlan": {
+      "subqueries": [
+        "electronics return policy",
+        "laptop return timeframe"
+      ]
+    }
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Clear Descriptions" icon="file-lines">
+    Provide descriptive names and descriptions for LLM context
+  </Card>
+  
+  <Card title="Start with Low Effort" icon="gauge">
+    Begin with low reasoning effort, increase only if needed
+  </Card>
+  
+  <Card title="Monitor Costs" icon="dollar-sign">
+    Track token usage and optimize reasoning effort
+  </Card>
+  
+  <Card title="Test Thoroughly" icon="flask">
+    Validate with representative queries before production
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Query API Reference" icon="code" href="https://learn.microsoft.com/rest/api/searchservice/knowledge-retrieval">
+    Explore the full API
+  </Card>
+  
+  <Card title="Foundry Integration" icon="link" href="https://learn.microsoft.com/azure/ai-foundry/agents">
+    Connect to Foundry Agent Service
+  </Card>
+</CardGroup>

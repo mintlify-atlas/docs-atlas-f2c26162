@@ -1,0 +1,248 @@
+---
+title: Query Overview
+description: Learn about the types of queries supported in Azure AI Search including full-text, vector, and hybrid queries.
+---
+
+# Querying in Azure AI Search
+
+Azure AI Search supports a broad range of query constructs for different scenarios, from free-form text search to vector similarity search.
+
+## Query Types
+
+<Tabs>
+  <Tab title="Full-Text">
+    **Full-Text Search**
+    
+    Traditional keyword-based search:
+    - BM25 relevance ranking
+    - Tokenization and analysis
+    - Fast inverted index scans
+    
+    ```json
+    {
+      "search": "luxury hotel",
+      "searchFields": "title,description"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Vector">
+    **Vector Search**
+    
+    Semantic similarity using embeddings:
+    - Cosine/euclidean similarity
+    - Nearest neighbor algorithms
+    - 1536-dimension vectors
+    
+    ```json
+    {
+      "vectorQueries": [
+        {
+          "vector": [...],
+          "fields": "contentVector",
+          "k": 50
+        }
+      ]
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Hybrid">
+    **Hybrid Search**
+    
+    Combined text and vector:
+    - Best of both approaches
+    - RRF result fusion
+    - Optional semantic ranking
+    
+    ```json
+    {
+      "search": "luxury hotel",
+      "vectorQueries": [
+        {
+          "vector": [...],
+          "fields": "contentVector",
+          "k": 50
+        }
+      ]
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Agentic">
+    **Agentic Retrieval**
+    
+    Multi-query pipeline:
+    - LLM query planning
+    - Parallel subqueries
+    - Agent-optimized response
+    
+    ```json
+    POST /knowledgebases/my-kb/retrieve
+    {
+      "query": "complex question",
+      "messageHistory": [...]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Query Components
+
+### Search Parameters
+
+- `search`: Full-text query string
+- `searchFields`: Fields to search (optional)
+- `searchMode`: any (OR) or all (AND)
+- `queryType`: simple or full Lucene
+
+### Filters
+
+- `filter`: OData filter expression
+- `facets`: Generate category counts
+- `orderby`: Sort expression
+
+### Result Control
+
+- `select`: Fields to return
+- `top`: Maximum results
+- `skip`: Pagination offset
+- `count`: Include total count
+
+## Autocomplete and Suggestions
+
+Type-ahead query experiences:
+
+```json
+{
+  "autocomplete": "hot",
+  "suggesterName": "sg",
+  "searchFields": "hotelName"
+}
+```
+
+**Returns**: Completed terms like "hotel", "hotels"
+
+## Geospatial Search
+
+Location-based filtering:
+
+```json
+{
+  "filter": "geo.distance(location, geography'POINT(-122.12 47.67)') le 10"
+}
+```
+
+**Functions**:
+- `geo.distance`: Distance between points
+- `geo.intersects`: Point within polygon
+
+## Advanced Query Features
+
+<CardGroup cols={2}>
+  <Card title="Fuzzy Search" icon="spell-check">
+    Handle typos with edit distance matching
+  </Card>
+  
+  <Card title="Fielded Search" icon="crosshairs">
+    Target specific fields with Lucene syntax
+  </Card>
+  
+  <Card title="Proximity Search" icon="arrows-left-right">
+    Find terms near each other in documents
+  </Card>
+  
+  <Card title="Term Boosting" icon="arrow-trend-up">
+    Increase relevance of specific terms
+  </Card>
+</CardGroup>
+
+## Query Syntax
+
+### Simple Syntax
+
+Default, intuitive syntax:
+
+```
+luxury hotel AND (spa OR pool) -airport
+"ocean view"
+hotel*
+```
+
+### Full Lucene Syntax
+
+Advanced operators and expressions:
+
+```
+title:luxury^2 description:beachfront
+name:/[mh]otel/
+"ocean view"~5
+seatle~
+```
+
+Enable with `"queryType": "full"`
+
+## Result Ranking
+
+### BM25 Scoring
+
+Default relevance algorithm:
+- Term frequency (TF)
+- Inverse document frequency (IDF)
+- Field length normalization
+
+### Vector Similarity
+
+For vector queries:
+- Cosine similarity (default)
+- Euclidean distance
+- Dot product
+
+### RRF (Hybrid)
+
+Reciprocal Rank Fusion for hybrid queries:
+```
+score = Σ 1/(k + rank)
+```
+
+## Query Example
+
+Complete hybrid query with filters:
+
+```json
+{
+  "search": "luxury beachfront hotel",
+  "searchFields": "hotelName,description",
+  "filter": "rating ge 4.5 and priceRange eq 'high'",
+  "orderby": "rating desc",
+  "select": "hotelId,hotelName,description,rating",
+  "vectorQueries": [
+    {
+      "kind": "vector",
+      "vector": [-0.009, 0.018, ...],
+      "fields": "descriptionVector",
+      "k": 50
+    }
+  ],
+  "queryType": "semantic",
+  "semanticConfiguration": "my-semantic-config",
+  "top": 10,
+  "count": true
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Full-Text Queries" icon="text" href="/search/queries/full-text">
+    Master keyword search syntax
+  </Card>
+  
+  <Card title="Vector Queries" icon="diagram-project" href="/search/queries/vector">
+    Execute vector similarity searches
+  </Card>
+  
+  <Card title="Query Examples" icon="code" href="https://learn.microsoft.com/azure/search/search-query-simple-examples">
+    View more query patterns
+  </Card>
+</CardGroup>

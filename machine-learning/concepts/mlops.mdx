@@ -1,0 +1,572 @@
+---
+title: MLOps - Model Management and Deployment
+description: Learn how Azure Machine Learning uses MLOps to manage the machine learning lifecycle, from training to production deployment.
+---
+
+# MLOps: Model Management with Azure Machine Learning
+
+Machine Learning Operations (MLOps) applies DevOps principles to the machine learning lifecycle, improving the quality, consistency, and efficiency of ML solutions.
+
+<Info>
+MLOps enables faster experimentation, deployment, and iteration while maintaining quality assurance and end-to-end lineage tracking.
+</Info>
+
+## What is MLOps?
+
+MLOps is based on DevOps principles that increase workflow efficiency:
+
+<CardGroup cols={3}>
+  <Card title="Continuous Integration" icon="code-merge">
+    Automated testing and validation of ML code and models
+  </Card>
+  <Card title="Continuous Deployment" icon="rocket">
+    Automated deployment of models to production
+  </Card>
+  <Card title="Continuous Delivery" icon="truck">
+    Reliable release of ML solutions to users
+  </Card>
+</CardGroup>
+
+## Benefits of MLOps
+
+Applying MLOps to machine learning results in:
+
+<Tabs>
+  <Tab title="Faster Experimentation">
+    - Quick iteration on model architectures
+    - Parallel experiment tracking
+    - Reproducible training pipelines
+    - Efficient hyperparameter tuning
+  </Tab>
+  <Tab title="Faster Deployment">
+    - Automated model packaging
+    - Streamlined approval workflows
+    - Infrastructure as code
+    - Zero-downtime deployments
+  </Tab>
+  <Tab title="Better Quality">
+    - Automated model validation
+    - A/B testing in production
+    - Performance monitoring
+    - Drift detection and alerting
+  </Tab>
+</Tabs>
+
+## MLOps Capabilities in Azure Machine Learning
+
+### 1. Reproducible ML Pipelines
+
+Define repeatable workflows for data preparation, training, and scoring:
+
+```python
+from azure.ai.ml import dsl
+from azure.ai.ml import Input, Output
+
+@dsl.pipeline(
+    name="training_pipeline",
+    description="End-to-end training pipeline",
+)
+def ml_pipeline(pipeline_input_data):
+    # Data preparation step
+    prep_data = prep_component(
+        raw_data=pipeline_input_data
+    )
+    
+    # Training step
+    train_model = train_component(
+        training_data=prep_data.outputs.prepared_data
+    )
+    
+    # Evaluation step
+    evaluate_model = eval_component(
+        model=train_model.outputs.model,
+        test_data=prep_data.outputs.test_data
+    )
+    
+    return {
+        "model": train_model.outputs.model,
+        "metrics": evaluate_model.outputs.metrics
+    }
+
+# Create and submit pipeline
+pipeline_job = ml_pipeline(
+    pipeline_input_data=Input(type="uri_folder", path="azureml://datastores/data")
+)
+
+ml_client.jobs.create_or_update(pipeline_job)
+```
+
+<Accordion title="Pipeline Benefits">
+  - **Reusability**: Use same pipeline for different datasets
+  - **Versioning**: Track pipeline definitions over time
+  - **Parallelization**: Run independent steps concurrently
+  - **Scheduling**: Trigger pipelines on schedules or events
+</Accordion>
+
+### 2. Reusable Software Environments
+
+Ensure reproducible builds without manual configuration:
+
+<CodeGroup>
+```python Docker Image
+from azure.ai.ml.entities import Environment
+
+env = Environment(
+    name="sklearn-env",
+    description="Scikit-learn environment",
+    image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
+    conda_file="environment.yml"
+)
+
+ml_client.environments.create_or_update(env)
+```
+
+```yaml Conda Dependencies
+name: sklearn-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - scikit-learn==1.3.0
+    - pandas==2.0.3
+    - mlflow==2.8.0
+    - azureml-mlflow==1.52.0
+```
+</CodeGroup>
+
+### 3. Model Registration and Versioning
+
+Store and track models in the Azure Machine Learning registry:
+
+```python
+from azure.ai.ml.entities import Model
+
+# Register model
+model = Model(
+    path="outputs/model",
+    name="fraud-detection-model",
+    description="XGBoost model for fraud detection",
+    tags={"framework": "xgboost", "task": "classification"},
+    properties={"accuracy": "0.95", "dataset": "fraud_v2"}
+)
+
+registered_model = ml_client.models.create_or_update(model)
+print(f"Registered model: {registered_model.name} version {registered_model.version}")
+```
+
+**Model Registry Features:**
+
+<CardGroup cols={2}>
+  <Card title="Automatic Versioning" icon="code-branch">
+    Each registration increments version number automatically
+  </Card>
+  <Card title="Metadata Tracking" icon="tags">
+    Store tags and properties for searchability
+  </Card>
+  <Card title="Lineage" icon="diagram-project">
+    Link to training job, dataset, and environment
+  </Card>
+  <Card title="Model Comparison" icon="scale-balanced">
+    Compare metrics across versions
+  </Card>
+</CardGroup>
+
+### 4. Model Deployment as Endpoints
+
+Deploy models for real-time or batch inference:
+
+<Tabs>
+  <Tab title="Online Endpoints">
+    Real-time inference with managed infrastructure:
+    
+    ```python
+    from azure.ai.ml.entities import (
+        ManagedOnlineEndpoint,
+        ManagedOnlineDeployment,
+        Model,
+        Environment,
+        CodeConfiguration
+    )
+    
+    # Create endpoint
+    endpoint = ManagedOnlineEndpoint(
+        name="fraud-detection-endpoint",
+        description="Fraud detection API",
+        auth_mode="key"
+    )
+    ml_client.online_endpoints.begin_create_or_update(endpoint)
+    
+    # Create deployment
+    deployment = ManagedOnlineDeployment(
+        name="blue",
+        endpoint_name="fraud-detection-endpoint",
+        model=registered_model,
+        environment="azureml://registries/azureml/environments/sklearn-1.5/versions/1",
+        code_configuration=CodeConfiguration(
+            code="src",
+            scoring_script="score.py"
+        ),
+        instance_type="Standard_DS3_v2",
+        instance_count=2
+    )
+    ml_client.online_deployments.begin_create_or_update(deployment)
+    ```
+  </Tab>
+  
+  <Tab title="Batch Endpoints">
+    Process large datasets asynchronously:
+    
+    ```python
+    from azure.ai.ml.entities import (
+        BatchEndpoint,
+        BatchDeployment,
+        Model
+    )
+    
+    # Create batch endpoint
+    endpoint = BatchEndpoint(
+        name="fraud-batch-endpoint",
+        description="Batch fraud scoring"
+    )
+    ml_client.batch_endpoints.begin_create_or_update(endpoint)
+    
+    # Create deployment
+    deployment = BatchDeployment(
+        name="default",
+        endpoint_name="fraud-batch-endpoint",
+        model=registered_model,
+        compute="batch-cluster",
+        instance_count=3,
+        max_concurrency_per_instance=2,
+        mini_batch_size=10,
+        output_file_name="predictions.csv"
+    )
+    ml_client.batch_deployments.begin_create_or_update(deployment)
+    ```
+  </Tab>
+  
+  <Tab title="MLflow Models">
+    Deploy without scoring script:
+    
+    ```python
+    deployment = ManagedOnlineDeployment(
+        name="mlflow-deployment",
+        endpoint_name="my-endpoint",
+        model=Model(path="model", type="mlflow_model"),
+        instance_type="Standard_DS3_v2",
+        instance_count=1
+    )
+    ```
+    
+    <Note>
+    MLflow models include the scoring logic, eliminating the need for a custom scoring script.
+    </Note>
+  </Tab>
+</Tabs>
+
+### 5. Controlled Rollout
+
+Safely deploy new model versions with traffic splitting:
+
+```python
+# Deploy new model version to "green" deployment
+green_deployment = ManagedOnlineDeployment(
+    name="green",
+    endpoint_name="fraud-detection-endpoint",
+    model=new_model_version,
+    instance_type="Standard_DS3_v2",
+    instance_count=1
+)
+ml_client.online_deployments.begin_create_or_update(green_deployment)
+
+# Gradually shift traffic from blue to green
+endpoint.traffic = {"blue": 90, "green": 10}
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+
+# Monitor metrics, then complete rollout
+endpoint.traffic = {"green": 100}
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+```
+
+**Traffic Management Strategies:**
+
+<Steps>
+  <Step title="Shadow Deployment">
+    Mirror traffic to new deployment without affecting production
+  </Step>
+  <Step title="Canary Release">
+    Route small percentage of traffic to new version
+  </Step>
+  <Step title="Blue-Green">
+    Switch all traffic between versions instantly
+  </Step>
+  <Step title="A/B Testing">
+    Compare performance of multiple model versions
+  </Step>
+</Steps>
+
+## Metadata and Lineage Tracking
+
+Azure Machine Learning captures end-to-end lineage:
+
+### Data Lineage
+
+```python
+from azure.ai.ml.entities import Data
+from azure.ai.ml.constants import AssetTypes
+
+# Register dataset
+data_asset = Data(
+    name="fraud-training-data",
+    version="2024-01",
+    description="Fraud transactions dataset",
+    path="azureml://datastores/data/paths/fraud/",
+    type=AssetTypes.URI_FOLDER,
+    tags={"year": "2024", "domain": "finance"}
+)
+
+ml_client.data.create_or_update(data_asset)
+```
+
+### Job History
+
+Automatic tracking of:
+- Code snapshots (Git commit)
+- Input datasets and versions
+- Hyperparameters
+- Metrics and outputs
+- Compute environment
+- Duration and costs
+
+```python
+# Query job history
+jobs = ml_client.jobs.list(
+    parent_job_name="training-pipeline-run-123"
+)
+
+for job in jobs:
+    print(f"{job.name}: {job.status} - {job.properties}")
+```
+
+## Event-Driven Workflows
+
+Trigger actions based on ML lifecycle events:
+
+<CodeGroup>
+```python Event Grid Integration
+from azure.eventgrid import EventGridEvent
+
+# Subscribe to model registration events
+event_types = [
+    "Microsoft.MachineLearningServices.ModelRegistered",
+    "Microsoft.MachineLearningServices.ModelDeployed",
+    "Microsoft.MachineLearningServices.DatasetDriftDetected"
+]
+
+# Event handler
+def handle_ml_event(event: EventGridEvent):
+    if event.event_type == "ModelRegistered":
+        model_name = event.data["modelName"]
+        model_version = event.data["modelVersion"]
+        
+        # Trigger deployment pipeline
+        trigger_deployment(model_name, model_version)
+```
+
+```yaml Azure DevOps Pipeline
+trigger:
+  - main
+
+stages:
+- stage: Train
+  jobs:
+  - job: TrainModel
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'my-subscription'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az ml job create --file training-job.yml
+
+- stage: Deploy
+  dependsOn: Train
+  condition: succeeded()
+  jobs:
+  - job: DeployModel
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az ml online-deployment create --file deployment.yml
+```
+</CodeGroup>
+
+## Monitoring and Alerting
+
+### Model Monitoring
+
+Track model performance in production:
+
+```python
+from azure.ai.ml.entities import AlertNotification
+
+# Configure monitoring
+monitor = ModelMonitor(
+    endpoint_name="fraud-detection-endpoint",
+    deployment_name="blue",
+    monitoring_signals=[
+        "data_drift",
+        "prediction_drift",
+        "model_performance"
+    ],
+    alert_notification=AlertNotification(
+        emails=["ml-team@company.com"]
+    )
+)
+```
+
+### Metrics to Monitor
+
+<Tabs>
+  <Tab title="Operational">
+    - Request latency (P50, P95, P99)
+    - Throughput (requests/second)
+    - Error rate
+    - CPU/GPU utilization
+    - Memory usage
+  </Tab>
+  <Tab title="Model Performance">
+    - Prediction accuracy
+    - Precision and recall
+    - F1 score
+    - AUC-ROC
+    - Confusion matrix
+  </Tab>
+  <Tab title="Data Quality">
+    - Input data drift
+    - Feature distribution changes
+    - Missing values
+    - Outliers
+    - Schema validation
+  </Tab>
+</Tabs>
+
+## CI/CD with Azure Pipelines
+
+Integrate Azure Machine Learning into DevOps workflows:
+
+### Azure DevOps Extension
+
+The [Machine Learning extension](https://marketplace.visualstudio.com/items?itemName=ms-air-aiagility.vss-services-azureml) provides:
+
+- Azure ML workspace integration
+- Model training triggers
+- Automated deployment tasks
+- Environment management
+
+### GitHub Actions
+
+```yaml
+name: Train and Deploy ML Model
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Install Azure ML CLI
+        run: az extension add -n ml
+      
+      - name: Submit Training Job
+        run: |
+          az ml job create \
+            --file jobs/train.yml \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --workspace-name ${{ secrets.WORKSPACE_NAME }}
+      
+      - name: Deploy Model
+        run: |
+          az ml online-endpoint create --file endpoints/endpoint.yml
+          az ml online-deployment create --file endpoints/deployment.yml
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Version Everything">
+    Track versions for:
+    - Training code (Git commits)
+    - Data assets (versioned datasets)
+    - Models (automatic versioning)
+    - Environments (pinned dependencies)
+    - Pipeline definitions (YAML configs)
+  </Accordion>
+  
+  <Accordion title="Automate Testing">
+    Implement:
+    - Unit tests for training code
+    - Integration tests for pipelines
+    - Model validation tests
+    - Deployment smoke tests
+    - Performance benchmarks
+  </Accordion>
+  
+  <Accordion title="Monitor in Production">
+    Set up:
+    - Real-time dashboards
+    - Automated alerts
+    - Data drift detection
+    - Model performance tracking
+    - Cost monitoring
+  </Accordion>
+  
+  <Accordion title="Use Feature Stores">
+    Benefits:
+    - Consistent feature definitions
+    - Training-serving skew prevention
+    - Feature reusability
+    - Point-in-time correctness
+  </Accordion>
+  
+  <Accordion title="Implement Governance">
+    Establish:
+    - Model approval workflows
+    - Access control policies
+    - Compliance documentation
+    - Audit trails
+    - Responsible AI reviews
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Set Up MLOps" icon="gears">
+    Configure CI/CD with Azure DevOps
+  </Card>
+  <Card title="Model Deployment" icon="rocket" href="/machine-learning/deployment/overview">
+    Deploy models to endpoints
+  </Card>
+  <Card title="Model Monitoring" icon="chart-line">
+    Monitor models in production
+  </Card>
+  <Card title="Azure Pipelines" icon="diagram-project">
+    Integrate with Azure DevOps
+  </Card>
+</CardGroup>

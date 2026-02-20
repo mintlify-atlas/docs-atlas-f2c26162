@@ -1,0 +1,79 @@
+---
+title: Azure Functions Tool
+description: Integrate agents with Azure Functions for serverless tool execution, enterprise system integration, and complex workflows.
+---
+
+# Azure Functions Tool
+
+Azure Functions enables serverless compute for agent tools, providing enterprise integration capabilities with custom code execution.
+
+## When to Use Azure Functions
+
+Choose Azure Functions over function calling when you need:
+
+- **Separation of concerns**: Isolate business logic from agent code
+- **Centralized management**: Share tools across multiple agents
+- **Security isolation**: Control agent and tool permissions separately
+- **External dependencies**: Use non-Microsoft libraries or legacy systems
+- **Complex operations**: Handle multi-step workflows
+- **Async processing**: Execute long-running operations
+
+## Integration Options
+
+### Queue-Based Tools
+
+Asynchronous processing via Azure Queue Storage:
+
+```python
+from azure.ai.projects.models import AzureFunctionTool
+
+function_tool = AzureFunctionTool(
+    name="process_order",
+    description="Process a customer order",
+    input_binding={"storage_queue": "order-queue"},
+    output_binding={"storage_queue": "order-results"}
+)
+```
+
+**Best for**: Background processing, reliable message delivery, retry capabilities
+
+### HTTP-Based Tools
+
+Synchronous calls via HTTP triggers (use OpenAPI tool)
+
+**Best for**: Real-time responses, immediate feedback
+
+### MCP Server
+
+Model Context Protocol for reusable tool catalogs
+
+**Best for**: Industry standard, shared tools across agents
+
+## Quick Start Template
+
+<Steps>
+  <Step title="Initialize Template">
+    ```bash
+    azd init --template azure-functions-ai-services-agent-python
+    ```
+  </Step>
+  <Step title="Provision Resources">
+    ```bash
+    azd provision
+    ```
+    Creates: Function app, Foundry resources, Storage, Cosmos DB, AI Search
+  </Step>
+  <Step title="Deploy Code">
+    ```bash
+    azd deploy
+    ```
+  </Step>
+</Steps>
+
+## Prerequisites
+
+- Azure Functions Core Tools v4.x
+- Deployed agent with Standard Setup (Basic not supported)
+- Azure account with active subscription
+
+See [Function Calling](/foundry/agents/tools/function-calling) for in-process functions.

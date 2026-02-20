@@ -1,0 +1,71 @@
+---
+title: Code Interpreter Tool
+description: Enable agents to write and execute Python code in sandboxed environments for data analysis, calculations, and visualizations.
+---
+
+# Code Interpreter Tool
+
+Code Interpreter allows agents to write and run Python code in a sandboxed execution environment. Agents can iteratively solve complex problems involving code, math, data analysis, or create graphs and charts.
+
+## Key Features
+
+- **Iterative execution**: Agents can modify and retry code until it works
+- **Data analysis**: Process CSV files and perform calculations
+- **Visualizations**: Generate charts and graphs
+- **File support**: Upload and download files
+- **Automatic retry**: Failed code is automatically revised
+
+<Warning>
+Code Interpreter has additional charges beyond token-based fees. Each concurrent session is billed separately (active for 1 hour by default, 30-minute idle timeout).
+</Warning>
+
+## Quick Start
+
+<CodeGroup>
+```python Python
+from azure.ai.projects.models import CodeInterpreterTool
+
+code_interpreter = CodeInterpreterTool()
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="data-analyst",
+    instructions="You can analyze data and create visualizations",
+    tools=code_interpreter.definitions,
+    tool_resources=code_interpreter.resources,
+)
+```
+
+```csharp C#
+var agent = client.Administration.CreateAgent(
+    model: modelDeploymentName,
+    name: "Data Analyst",
+    instructions: "Use code interpreter to visualize data",
+    tools: [new CodeInterpreterToolDefinition()]
+);
+```
+</CodeGroup>
+
+## Attaching Files
+
+<CodeGroup>
+```python Python
+# Upload file
+file = project.agents.files.upload_and_poll(
+    file_path="data.csv",
+    purpose=FilePurpose.AGENTS
+)
+
+# Create tool with file
+code_interpreter = CodeInterpreterTool(file_ids=[file.id])
+```
+</CodeGroup>
+
+## Supported File Types
+
+- Code: `.py`, `.js`, `.java`, `.cpp`, `.c`
+- Data: `.csv`, `.json`, `.xml`, `.xlsx`
+- Documents: `.pdf`, `.docx`, `.txt`, `.md`
+- Images: `.jpg`, `.png`, `.gif`
+
+See [File Search Tool](/foundry/agents/tools/file-search) for document retrieval.

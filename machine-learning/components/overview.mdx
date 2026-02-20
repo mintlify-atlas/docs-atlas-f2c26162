@@ -1,0 +1,638 @@
+---
+title: Azure Machine Learning Components
+description: Learn about reusable components for building machine learning pipelines in Azure Machine Learning.
+---
+
+# What is an Azure Machine Learning Component?
+
+An Azure Machine Learning component is a self-contained piece of code that performs one step in a machine learning pipeline. Components are the building blocks of machine learning workflows, analogous to functions in programming.
+
+<Info>
+Components enable reusability, versioning, and collaboration across machine learning pipelines and teams.
+</Info>
+
+## Component Structure
+
+A component consists of three parts:
+
+<Steps>
+  <Step title="Metadata">
+    Name, display name, version, type, description, tags
+  </Step>
+  <Step title="Interface">
+    Input/output specifications with name, type, description, and default values
+  </Step>
+  <Step title="Execution">
+    Command, code, and environment needed to run the component
+  </Step>
+</Steps>
+
+## Why Use Components?
+
+<CardGroup cols={2}>
+  <Card title="Well-Defined Interface" icon="plug">
+    Clear inputs and outputs hide implementation complexity
+  </Card>
+  <Card title="Reusability" icon="recycle">
+    Share components across pipelines, workspaces, and teams
+  </Card>
+  <Card title="Version Control" icon="code-branch">
+    Track component versions for compatibility and reproducibility
+  </Card>
+  <Card title="Unit Testable" icon="flask">
+    Self-contained code is easy to test independently
+  </Card>
+</CardGroup>
+
+## Component Example
+
+### Define a Component
+
+<Tabs>
+  <Tab title="Python SDK">
+    ```python
+    from azure.ai.ml import command, Input, Output
+    from azure.ai.ml.constants import AssetTypes
+    
+    # Define component
+    train_component = command(
+        name="train_model",
+        display_name="Train Model Component",
+        description="Train a classification model",
+        version="1.0.0",
+        inputs={
+            "training_data": Input(
+                type=AssetTypes.URI_FOLDER,
+                description="Path to training data"
+            ),
+            "learning_rate": Input(
+                type="number",
+                default=0.01,
+                description="Learning rate for optimizer"
+            ),
+            "epochs": Input(
+                type="integer",
+                default=10,
+                description="Number of training epochs"
+            )
+        },
+        outputs={
+            "model": Output(
+                type=AssetTypes.URI_FOLDER,
+                description="Trained model files"
+            ),
+            "metrics": Output(
+                type=AssetTypes.URI_FILE,
+                description="Training metrics JSON"
+            )
+        },
+        code="./src",
+        command="python train.py --data ${{inputs.training_data}} --lr ${{inputs.learning_rate}} --epochs ${{inputs.epochs}} --output ${{outputs.model}} --metrics ${{outputs.metrics}}",
+        environment="azureml://registries/azureml/environments/sklearn-1.5/versions/1",
+    )
+    
+    # Register component
+    train_component = ml_client.components.create_or_update(train_component)
+    ```
+  </Tab>
+  
+  <Tab title="YAML Definition">
+    ```yaml
+    $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+    name: train_model
+    display_name: Train Model Component
+    version: 1.0.0
+    type: command
+    description: Train a classification model
+    
+    inputs:
+      training_data:
+        type: uri_folder
+        description: Path to training data
+      learning_rate:
+        type: number
+        default: 0.01
+        description: Learning rate for optimizer
+      epochs:
+        type: integer
+        default: 10
+        description: Number of training epochs
+    
+    outputs:
+      model:
+        type: uri_folder
+        description: Trained model files
+      metrics:
+        type: uri_file
+        description: Training metrics JSON
+    
+    code: ./src
+    command: >
+      python train.py 
+      --data ${{inputs.training_data}}
+      --lr ${{inputs.learning_rate}}
+      --epochs ${{inputs.epochs}}
+      --output ${{outputs.model}}
+      --metrics ${{outputs.metrics}}
+    
+    environment: azureml://registries/azureml/environments/sklearn-1.5/versions/1
+    ```
+  </Tab>
+</Tabs>
+
+### Component Implementation
+
+```python
+# src/train.py
+import argparse
+import json
+import os
+from pathlib import Path
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import train_test_split
+import joblib
+
+def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", type=str, help="Training data path")
+    parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
+    parser.add_argument("--epochs", type=int, default=10, help="Training epochs")
+    parser.add_argument("--output", type=str, help="Model output path")
+    parser.add_argument("--metrics", type=str, help="Metrics output path")
+    args = parser.parse_args()
+    
+    print(f"Training with lr={args.lr}, epochs={args.epochs}")
+    
+    # Load data
+    data_path = Path(args.data)
+    df = pd.read_csv(data_path / "train.csv")
+    
+    X = df.drop("target", axis=1)
+    y = df["target"]
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    
+    # Train model
+    model = RandomForestClassifier(n_estimators=args.epochs * 10)
+    model.fit(X_train, y_train)
+    
+    # Evaluate
+    y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average="weighted")
+    
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+    
+    # Save model
+    output_path = Path(args.output)
+    output_path.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, output_path / "model.pkl")
+    
+    # Save metrics
+    metrics = {
+        "accuracy": accuracy,
+        "f1_score": f1,
+        "learning_rate": args.lr,
+        "epochs": args.epochs
+    }
+    
+    metrics_path = Path(args.metrics)
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(metrics_path, "w") as f:
+        json.dump(metrics, f, indent=2)
+    
+    print("Training complete!")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Build a Pipeline with Components
+
+Connect components to create end-to-end workflows:
+
+```python
+from azure.ai.ml import dsl, Input, Output
+
+@dsl.pipeline(
+    name="training_pipeline",
+    description="Complete ML training pipeline",
+    default_compute="cpu-cluster"
+)
+def ml_training_pipeline(
+    pipeline_data: Input,
+    learning_rate: float = 0.01,
+    epochs: int = 10
+):
+    # Step 1: Data preprocessing
+    prep_step = prep_data_component(
+        raw_data=pipeline_data
+    )
+    
+    # Step 2: Feature engineering
+    feature_step = feature_engineering_component(
+        processed_data=prep_step.outputs.processed_data
+    )
+    
+    # Step 3: Train model
+    train_step = train_component(
+        training_data=feature_step.outputs.features,
+        learning_rate=learning_rate,
+        epochs=epochs
+    )
+    
+    # Step 4: Evaluate model
+    eval_step = evaluate_component(
+        model=train_step.outputs.model,
+        test_data=feature_step.outputs.test_features
+    )
+    
+    # Step 5: Register model if metrics are good
+    register_step = register_model_component(
+        model=train_step.outputs.model,
+        metrics=eval_step.outputs.metrics,
+        min_accuracy=0.85
+    )
+    
+    # Return pipeline outputs
+    return {
+        "model": train_step.outputs.model,
+        "metrics": eval_step.outputs.metrics,
+        "registered_model": register_step.outputs.model_name
+    }
+
+# Create pipeline instance
+pipeline_job = ml_training_pipeline(
+    pipeline_data=Input(
+        type="uri_folder",
+        path="azureml://datastores/workspaceblobstore/paths/data/"
+    ),
+    learning_rate=0.001,
+    epochs=20
+)
+
+# Submit pipeline
+returned_job = ml_client.jobs.create_or_update(pipeline_job)
+print(f"Pipeline submitted: {returned_job.studio_url}")
+```
+
+## Component Input/Output Types
+
+### Supported Types
+
+<Tabs>
+  <Tab title="Data Types">
+    | Type | Description | Example |
+    |------|-------------|---------|
+    | `uri_file` | Single file reference | CSV, JSON, model file |
+    | `uri_folder` | Directory reference | Dataset folder, model directory |
+    | `mltable` | Tabular data abstraction | Structured datasets |
+  </Tab>
+  
+  <Tab title="Primitive Types">
+    | Type | Description | Example |
+    |------|-------------|---------|
+    | `string` | Text values | "model_v1", "production" |
+    | `number` | Float values | 0.01, 3.14 |
+    | `integer` | Integer values | 10, 100 |
+    | `boolean` | True/False | true, false |
+  </Tab>
+</Tabs>
+
+### Input Definition
+
+```python
+from azure.ai.ml import Input
+from azure.ai.ml.constants import AssetTypes
+
+inputs = {
+    # Data inputs
+    "training_data": Input(
+        type=AssetTypes.URI_FOLDER,
+        description="Training dataset folder"
+    ),
+    
+    # Parameter inputs with defaults
+    "batch_size": Input(
+        type="integer",
+        default=32,
+        description="Training batch size",
+        min=1,
+        max=512
+    ),
+    
+    "learning_rate": Input(
+        type="number",
+        default=0.001,
+        description="Optimizer learning rate",
+        min=0.0001,
+        max=0.1
+    ),
+    
+    "model_name": Input(
+        type="string",
+        default="my-model",
+        description="Name for registered model"
+    ),
+    
+    "enable_early_stopping": Input(
+        type="boolean",
+        default=True,
+        description="Enable early stopping"
+    )
+}
+```
+
+### Output Definition
+
+```python
+from azure.ai.ml import Output
+from azure.ai.ml.constants import AssetTypes
+
+outputs = {
+    "model": Output(
+        type=AssetTypes.URI_FOLDER,
+        description="Trained model directory",
+        mode="rw_mount"  # Read-write mount
+    ),
+    
+    "metrics": Output(
+        type=AssetTypes.URI_FILE,
+        description="Metrics JSON file"
+    ),
+    
+    "visualizations": Output(
+        type=AssetTypes.URI_FOLDER,
+        description="Training plots and charts"
+    )
+}
+```
+
+## Component Versioning
+
+Manage component versions for reproducibility:
+
+```python
+# Create version 1.0.0
+train_component_v1 = command(
+    name="train_model",
+    version="1.0.0",
+    inputs={...},
+    outputs={...},
+    code="./src",
+    command="python train.py ...",
+    environment="azureml://environments/sklearn-1.5/versions/1"
+)
+
+ml_client.components.create_or_update(train_component_v1)
+
+# Create improved version 2.0.0
+train_component_v2 = command(
+    name="train_model",
+    version="2.0.0",  # New version
+    inputs={...},  # Added new input parameters
+    outputs={...},
+    code="./src",
+    command="python train_v2.py ...",  # Improved implementation
+    environment="azureml://environments/sklearn-1.5/versions/2"
+)
+
+ml_client.components.create_or_update(train_component_v2)
+
+# Use specific version in pipeline
+train_step = ml_client.components.get(
+    name="train_model",
+    version="1.0.0"  # Pin to specific version
+)
+```
+
+## Share Components Across Workspaces
+
+### Using Registries
+
+```python
+from azure.ai.ml import MLClient
+from azure.identity import DefaultAzureCredential
+
+# Connect to registry
+registry_client = MLClient(
+    DefaultAzureCredential(),
+    registry_name="my-registry"
+)
+
+# Publish component to registry
+registry_client.components.create_or_update(train_component)
+
+# Use component from registry in any workspace
+train_step = registry_client.components.get(
+    name="train_model",
+    version="1.0.0"
+)
+
+# Or reference by URI
+train_step = command(
+    component="azureml://registries/my-registry/components/train_model/versions/1.0.0"
+)
+```
+
+## Built-in Components
+
+Azure ML provides pre-built components for common tasks:
+
+<CardGroup cols={2}>
+  <Card title="Data Processing" icon="table">
+    - Select Columns
+    - Clean Missing Data
+    - Normalize Data
+    - Split Data
+  </Card>
+  
+  <Card title="Feature Engineering" icon="wand-magic-sparkles">
+    - Feature Hashing
+    - N-Gram Features
+    - Filter-Based Selection
+    - PCA Transformation
+  </Card>
+  
+  <Card title="Training" icon="graduation-cap">
+    - Train Classifier
+    - Train Regressor
+    - Train Clustering Model
+    - Train Recommender
+  </Card>
+  
+  <Card title="Evaluation" icon="chart-bar">
+    - Evaluate Model
+    - Cross Validate Model
+    - Tune Hyperparameters
+    - Score Model
+  </Card>
+</CardGroup>
+
+### Using Built-in Components
+
+```python
+from azure.ai.ml import load_component
+
+# Load built-in component
+normalize_data = load_component(
+    client=ml_client,
+    name="normalize_data",
+    version="latest"
+)
+
+# Use in pipeline
+@dsl.pipeline()
+def my_pipeline(input_data):
+    normalized = normalize_data(
+        dataset=input_data,
+        transformation_method="ZScore"
+    )
+    return normalized.outputs.transformed_data
+```
+
+## Component Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Components Focused">
+    Each component should do one thing well:
+    - Data preprocessing
+    - Feature engineering
+    - Model training
+    - Model evaluation
+    
+    Don't combine multiple responsibilities in one component.
+  </Accordion>
+  
+  <Accordion title="Version Components">
+    Always specify version numbers:
+    - Use semantic versioning (1.0.0, 1.1.0, 2.0.0)
+    - Increment major version for breaking changes
+    - Increment minor version for new features
+    - Increment patch version for bug fixes
+  </Accordion>
+  
+  <Accordion title="Document Inputs/Outputs">
+    Provide clear descriptions:
+    ```python
+    inputs={
+        "data": Input(
+            type=AssetTypes.URI_FOLDER,
+            description="Training data in CSV format with columns: feature1, feature2, target"
+        )
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Type Hints">
+    Specify input constraints:
+    ```python
+    inputs={
+        "batch_size": Input(
+            type="integer",
+            default=32,
+            min=1,
+            max=512,
+            description="Must be power of 2 for optimal performance"
+        )
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle Errors Gracefully">
+    ```python
+    # In component code
+    try:
+        # Component logic
+        pass
+    except Exception as e:
+        print(f"Error in component: {str(e)}")
+        raise  # Re-raise to fail pipeline
+    ```
+  </Accordion>
+  
+  <Accordion title="Test Components Independently">
+    ```python
+    # Test component locally
+    from azure.ai.ml import command
+    
+    test_job = command(
+        component=train_component,
+        inputs={
+            "training_data": "./test_data",
+            "learning_rate": 0.01
+        },
+        compute="local"
+    )
+    
+    ml_client.jobs.create_or_update(test_job)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Component vs Python Function
+
+| Aspect | Component | Python Function |
+|--------|-----------|----------------|
+| **Reusability** | Across pipelines, workspaces, teams | Within same codebase |
+| **Versioning** | Built-in version management | Manual tracking |
+| **Environment** | Isolated, reproducible | Depends on notebook/script env |
+| **Distribution** | Can be shared via registry | Requires code sharing |
+| **Execution** | Remote compute | Local or remote |
+| **Testing** | Can test independently | Function testing |
+
+## Parallel Components
+
+Process data in parallel using the parallel component:
+
+```python
+from azure.ai.ml.parallel import ParallelTask
+
+parallel_component = command(
+    name="batch_inference",
+    inputs={
+        "input_data": Input(type=AssetTypes.URI_FOLDER),
+        "model": Input(type=AssetTypes.URI_FOLDER)
+    },
+    outputs={
+        "predictions": Output(type=AssetTypes.URI_FOLDER)
+    },
+    code="./src",
+    command="python score.py --data ${{inputs.input_data}} --model ${{inputs.model}} --output ${{outputs.predictions}}",
+    environment="azureml://environments/pytorch/versions/1",
+    instance_count=10,  # Parallel instances
+    distribution={
+        "type": "pytorch",
+        "process_count_per_instance": 1
+    }
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build Pipelines" icon="diagram-project">
+    Create ML pipelines with components
+  </Card>
+  <Card title="Component Gallery" icon="store">
+    Browse pre-built components
+  </Card>
+  <Card title="Share Components" icon="share-nodes">
+    Use registries for team collaboration
+  </Card>
+  <Card title="CI/CD Integration" icon="gears" href="/machine-learning/concepts/mlops">
+    Automate component deployment
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [Component CLI v2 YAML Reference](https://learn.microsoft.com/azure/machine-learning/reference-yaml-component-command)
+- [Component Examples on GitHub](https://github.com/Azure/azureml-examples/tree/main/cli/jobs/pipelines-with-components)
+- [Build ML Pipelines](https://learn.microsoft.com/azure/machine-learning/concept-ml-pipelines)

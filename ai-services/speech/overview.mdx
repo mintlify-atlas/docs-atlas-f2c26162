@@ -1,0 +1,496 @@
+---
+title: Azure Speech Overview
+description: Speech-to-text, text-to-speech, speech translation, and voice recognition capabilities for adding speech to applications
+---
+
+# Azure Speech
+
+Azure Speech provides speech-to-text, text-to-speech, speech translation, and other speech processing capabilities. Build voice-enabled applications with high-accuracy speech recognition, natural-sounding speech synthesis, and real-time translation.
+
+## Key Capabilities
+
+<CardGroup cols={3}>
+  <Card title="Speech-to-Text" icon="microphone">
+    Convert spoken audio to text with high accuracy
+  </Card>
+  
+  <Card title="Text-to-Speech" icon="volume-high">
+    Generate natural-sounding speech from text
+  </Card>
+  
+  <Card title="Speech Translation" icon="language">
+    Translate spoken language in real-time
+  </Card>
+  
+  <Card title="Voice Live" icon="comments">
+    Build conversational voice interfaces
+  </Card>
+  
+  <Card title="Speaker Recognition" icon="user-check">
+    Identify and verify speakers by voice
+  </Card>
+  
+  <Card title="Pronunciation Assessment" icon="spell-check">
+    Evaluate and improve pronunciation
+  </Card>
+</CardGroup>
+
+## Speech-to-Text
+
+Transcribe audio to text with industry-leading accuracy:
+
+### Real-Time Transcription
+
+Convert streaming audio to text in real-time:
+
+```python
+import azure.cognitiveservices.speech as speechsdk
+
+speech_config = speechsdk.SpeechConfig(
+    subscription="<your-key>",
+    region="<your-region>"
+)
+
+audio_config = speechsdk.AudioConfig(use_default_microphone=True)
+recognizer = speechsdk.SpeechRecognizer(
+    speech_config=speech_config,
+    audio_config=audio_config
+)
+
+print("Say something...")
+result = recognizer.recognize_once()
+
+if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+    print(f"Recognized: {result.text}")
+elif result.reason == speechsdk.ResultReason.NoMatch:
+    print("No speech recognized")
+```
+
+### Batch Transcription
+
+Process large audio files asynchronously:
+
+```python
+from azure.cognitiveservices.speech import SpeechConfig
+from azure.cognitiveservices.speech.transcription import BatchTranscriptionClient
+
+client = BatchTranscriptionClient(
+    endpoint="https://<region>.api.cognitive.microsoft.com",
+    subscription_key="<your-key>"
+)
+
+# Create transcription
+transcription = client.create_transcription(
+    name="My Transcription",
+    description="Batch audio transcription",
+    locale="en-US",
+    content_urls=["https://example.com/audio.wav"]
+)
+
+# Wait for completion and get results
+while transcription.status != "Succeeded":
+    transcription = client.get_transcription(transcription.id)
+    time.sleep(10)
+
+results = client.get_transcription_files(transcription.id)
+```
+
+### Fast Transcription
+
+Quick transcription for pre-recorded audio:
+
+- Ultra-fast processing (faster than real-time)
+- Optimized for recorded files
+- Lower latency than batch transcription
+- Ideal for captions and subtitles
+
+### Custom Speech
+
+Improve accuracy for specific scenarios:
+
+- **Acoustic models**: Adapt to noise environments
+- **Language models**: Add domain-specific vocabulary
+- **Pronunciation**: Define custom pronunciations
+- Train with your audio and transcripts
+
+```python
+speech_config.endpoint_id = "<your-custom-model-id>"
+recognizer = speechsdk.SpeechRecognizer(
+    speech_config=speech_config,
+    audio_config=audio_config
+)
+```
+
+## Text-to-Speech
+
+Generate natural-sounding speech from text:
+
+### Neural Voices
+
+High-quality, natural voices powered by neural networks:
+
+```python
+speech_config = speechsdk.SpeechConfig(
+    subscription="<your-key>",
+    region="<your-region>"
+)
+
+# Select voice
+speech_config.speech_synthesis_voice_name = "en-US-JennyNeural"
+
+synthesizer = speechsdk.SpeechSynthesizer(
+    speech_config=speech_config
+)
+
+result = synthesizer.speak_text("Hello, welcome to Azure Speech!")
+
+if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+    print("Speech synthesized successfully")
+```
+
+### SSML (Speech Synthesis Markup Language)
+
+Fine-tune speech output:
+
+```python
+ssml = """
+<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+    <voice name="en-US-JennyNeural">
+        <prosody rate="slow" pitch="low">
+            This is spoken slowly with a low pitch.
+        </prosody>
+        <break time="1s"/>
+        <prosody rate="fast" pitch="high">
+            This is spoken quickly with a high pitch.
+        </prosody>
+    </voice>
+</speak>
+"""
+
+result = synthesizer.speak_ssml(ssml)
+```
+
+### Voice Styles and Emotions
+
+Express emotions and speaking styles:
+
+```xml
+<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"
+       xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">
+    <voice name="en-US-AriaNeural">
+        <mstts:express-as style="cheerful">
+            Great news! Your order has been confirmed.
+        </mstts:express-as>
+        <break time="500ms"/>
+        <mstts:express-as style="sad">
+            Unfortunately, we're experiencing delays.
+        </mstts:express-as>
+    </voice>
+</speak>
+```
+
+**Available Styles:**
+- Cheerful, sad, angry, fearful
+- Customer service, newscast, assistant
+- Chat, poetry reading, and more
+
+### Custom Neural Voice
+
+Create unique voices for your brand:
+
+- Record voice samples (300-2000 utterances)
+- Train custom neural voice model
+- Unique brand identity
+- Consistent voice across applications
+- Requires Limited Access approval
+
+### Batch Synthesis
+
+Generate audio for large texts asynchronously:
+
+```python
+from azure.cognitiveservices.speech import SpeechSynthesizer
+
+# Submit batch synthesis
+batch_request = {
+    "displayName": "Batch Synthesis",
+    "description": "Long form audio",
+    "textType": "PlainText",
+    "inputs": [
+        {"text": "Long text content to synthesize..."},
+    ],
+    "properties": {
+        "outputFormat": "audio-24khz-96kbitrate-mono-mp3",
+        "voiceName": "en-US-JennyNeural"
+    }
+}
+```
+
+## Speech Translation
+
+Translate speech between languages in real-time:
+
+```python
+translation_config = speechsdk.translation.SpeechTranslationConfig(
+    subscription="<your-key>",
+    region="<your-region>"
+)
+
+# Set source and target languages
+translation_config.speech_recognition_language = "en-US"
+translation_config.add_target_language("de")
+translation_config.add_target_language("fr")
+translation_config.add_target_language("es")
+
+recognizer = speechsdk.translation.TranslationRecognizer(
+    translation_config=translation_config
+)
+
+print("Say something in English...")
+result = recognizer.recognize_once()
+
+if result.reason == speechsdk.ResultReason.TranslatedSpeech:
+    print(f"Original: {result.text}")
+    for language, translation in result.translations.items():
+        print(f"{language}: {translation}")
+```
+
+### Speech-to-Speech Translation
+
+Translate and synthesize in target language:
+
+```python
+# Enable voice output in target language
+translation_config.voice_name = "de-DE-KatjaNeural"
+
+recognizer = speechsdk.translation.TranslationRecognizer(
+    translation_config=translation_config
+)
+
+def synthesis_callback(evt):
+    print(f"Synthesizing translated speech...")
+    # Play or save audio
+
+recognizer.synthesizing.connect(synthesis_callback)
+```
+
+## Voice Live (Preview)
+
+Build conversational voice interfaces:
+
+- Natural, human-like conversations
+- Fast response times (low latency)
+- Integration with LLMs
+- Real-time interaction
+- Context-aware responses
+
+## Language Identification
+
+Automatically detect spoken language:
+
+```python
+auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
+    languages=["en-US", "de-DE", "fr-FR"]
+)
+
+recognizer = speechsdk.SpeechRecognizer(
+    speech_config=speech_config,
+    auto_detect_source_language_config=auto_detect_config,
+    audio_config=audio_config
+)
+
+result = recognizer.recognize_once()
+auto_detect_result = speechsdk.AutoDetectSourceLanguageResult(result)
+
+print(f"Detected language: {auto_detect_result.language}")
+print(f"Recognized text: {result.text}")
+```
+
+## Pronunciation Assessment
+
+Evaluate speech pronunciation for language learning:
+
+```python
+pronunciation_config = speechsdk.PronunciationAssessmentConfig(
+    reference_text="Hello world",
+    grading_system=speechsdk.PronunciationAssessmentGradingSystem.HundredMark,
+    granularity=speechsdk.PronunciationAssessmentGranularity.Phoneme
+)
+
+pronunciation_config.enable_miscue = True
+pronunciation_config.apply_to(recognizer)
+
+result = recognizer.recognize_once()
+assessment_result = speechsdk.PronunciationAssessmentResult(result)
+
+print(f"Accuracy: {assessment_result.accuracy_score}")
+print(f"Fluency: {assessment_result.fluency_score}")
+print(f"Completeness: {assessment_result.completeness_score}")
+print(f"Pronunciation: {assessment_result.pronunciation_score}")
+```
+
+## Text-to-Speech Avatar
+
+Generate videos of photorealistic talking avatars:
+
+- Lifelike synthetic avatars
+- Natural speech and lip-sync
+- Multiple avatar styles
+- Real-time or batch generation
+- Suitable for training, presentations, customer service
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Call Centers">
+    - Transcribe customer calls
+    - Real-time agent assistance
+    - Sentiment analysis from audio
+    - Automated quality assurance
+    - Multi-language support
+  </Accordion>
+  
+  <Accordion title="Accessibility">
+    - Voice dictation for text input
+    - Screen reader integration
+    - Caption generation for videos
+    - Voice-controlled applications
+    - Text-to-speech for visually impaired
+  </Accordion>
+  
+  <Accordion title="Content Creation">
+    - Generate audiobooks from text
+    - Create podcast voiceovers
+    - Produce e-learning narration
+    - Synthesize multilingual content
+    - Avatar-based video production
+  </Accordion>
+  
+  <Accordion title="Customer Service">
+    - Voice-enabled chatbots
+    - IVR systems
+    - Virtual assistants
+    - Automated responses
+    - Multi-language support
+  </Accordion>
+  
+  <Accordion title="Language Learning">
+    - Pronunciation feedback
+    - Speaking practice
+    - Real-time transcription
+    - Reading assistance
+    - Fluency assessment
+  </Accordion>
+</AccordionGroup>
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-cognitiveservices-speech
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Microsoft.CognitiveServices.Speech
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    Maven package for Speech SDK
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install microsoft-cognitiveservices-speech-sdk
+    ```
+  </Card>
+  
+  <Card title="C++" icon="code">
+    Native SDK for C++ applications
+  </Card>
+  
+  <Card title="Swift/Objective-C" icon="apple">
+    SDK for iOS and macOS apps
+  </Card>
+</CardGroup>
+
+## Input Requirements
+
+### Speech-to-Text
+
+- **Audio formats**: WAV, MP3, OGG, FLAC, OPUS
+- **Sample rate**: 8 kHz or 16 kHz (16 kHz recommended)
+- **Channels**: Mono or stereo
+- **Bit depth**: 16-bit PCM
+
+### Text-to-Speech
+
+- **Text length**: Up to 10,000 characters per request
+- **SSML**: Supported for fine-tuned control
+- **Output formats**: Multiple audio formats available
+
+## Containers
+
+Run Speech services on-premises:
+
+- Speech-to-text container
+- Text-to-speech container
+- Custom speech container
+- Neural text-to-speech container
+- Maintain data privacy
+- Low-latency local processing
+
+## Pricing
+
+### Speech-to-Text
+
+- **Free Tier (F0)**: 5 hours per month
+- **Standard Tier (S0)**: Pay per hour of audio
+- Custom models: Additional costs
+
+### Text-to-Speech
+
+- **Free Tier (F0)**: 0.5M characters per month
+- **Standard Tier (S0)**: Pay per million characters
+- Neural voices: Higher cost than standard
+- Custom voices: Additional training and hosting
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create a Speech resource in the Azure Portal
+  </Step>
+  
+  <Step title="Try Speech Studio">
+    Test features with sample audio at [speech.microsoft.com](https://speech.microsoft.com)
+  </Step>
+  
+  <Step title="Install SDK">
+    Install the Speech SDK for your programming language
+  </Step>
+  
+  <Step title="Build Application">
+    Integrate speech capabilities into your app
+  </Step>
+</Steps>
+
+## Best Practices
+
+- Use appropriate audio quality (16 kHz, 16-bit)
+- Implement noise reduction for better accuracy
+- Use custom models for domain-specific vocabulary
+- Cache text-to-speech audio for repeated phrases
+- Implement retry logic for network failures
+- Monitor usage and costs
+- Test with diverse accents and speaking styles
+
+## Next Steps
+
+- [Try Speech Studio](https://speech.microsoft.com/)
+- [View Speech-to-Text Quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text)
+- [View Text-to-Speech Quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech)
+- [Explore Voice Gallery](https://speech.microsoft.com/portal/voicegallery)

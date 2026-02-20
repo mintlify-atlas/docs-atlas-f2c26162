@@ -1,0 +1,366 @@
+---
+title: Foundry Agent Service Overview
+description: Learn about Foundry Agent Service, a production-ready platform for building, deploying, and operating intelligent agents at enterprise scale.
+---
+
+# Foundry Agent Service
+
+Foundry Agent Service is Microsoft's production-ready platform for building intelligent agents that can automate complex business workflows. It provides the infrastructure, tools, and governance needed to move from prototype to production with confidence.
+
+## Why Foundry Agent Service?
+
+Most businesses want automation that's faster and has fewer errors—whether it's summarizing documents, processing invoices, managing support tickets, or publishing content. Large language models (LLMs) enable a new type of automation with systems that can understand unstructured data, make decisions, and generate content.
+
+However, moving beyond demos into production is challenging. LLMs can drift, be incorrect, and lack accountability. Without visibility, policy enforcement, and orchestration, these models are hard to trust in real business workflows.
+
+**Foundry Agent Service solves these challenges** by combining models, tools, frameworks, and governance into a unified system for building production-ready agents.
+
+## Architecture
+
+Foundry Agent Service acts as the central hub connecting four key components:
+
+<CardGroup cols={2}>
+  <Card title="AI Models" icon="brain">
+    Access Azure OpenAI, Foundry Direct, and partner models
+  </Card>
+  <Card title="Tools & Frameworks" icon="wrench">
+    Code Interpreter, File Search, Azure Functions, and more
+  </Card>
+  <Card title="Governance & Compliance" icon="shield-check">
+    Content Safety, RBAC, audit logs, network isolation
+  </Card>
+  <Card title="Orchestration" icon="diagram-project">
+    Manage conversations, coordinate tools, enforce policies
+  </Card>
+</CardGroup>
+
+Agent Service connects these pieces into a single runtime that manages conversations, orchestrates tool calls, enforces content safety, and integrates with identity, networking, and observability systems.
+
+## Key Capabilities
+
+### Production-Ready Infrastructure
+
+<Accordion title="Conversation Management">
+- Persistent threads for multi-turn conversations
+- Automatic context management (up to 100,000 messages per thread)
+- Thread lifecycle management
+- Message history and retrieval
+</Accordion>
+
+<Accordion title="Tool Orchestration">
+- Server-side execution of tool calls
+- Automatic retry logic
+- Structured logging of all invocations
+- Parallel tool execution
+- Multi-step workflows
+</Accordion>
+
+<Accordion title="Trust and Safety">
+- Integrated content filters for inputs and outputs
+- Prompt injection protection (including XPIA)
+- Policy-governed outputs
+- Jailbreak detection
+- Harmful content blocking
+</Accordion>
+
+<Accordion title="Enterprise Integration">
+- Bring your own Azure Storage
+- Bring your own Azure Cosmos DB
+- Bring your own Azure AI Search
+- Virtual network support
+- Customer-managed encryption keys
+</Accordion>
+
+<Accordion title="Observability">
+- Full conversation tracing
+- Tool invocation logs
+- Performance metrics
+- Application Insights integration
+- Debug and replay capabilities
+</Accordion>
+
+<Accordion title="Identity and Access">
+- Microsoft Entra ID integration
+- Role-based access control (RBAC)
+- Managed identities
+- Audit logs
+- Conditional access support
+</Accordion>
+
+## The Agent Factory
+
+Think of Foundry as an assembly line for intelligent agents. Like a modern factory, it brings together specialized stations that shape the final product:
+
+<Steps>
+  <Step title="1. Models">
+    Select a model that gives your agent intelligence:
+    - GPT-4o for complex reasoning
+    - GPT-4 for advanced understanding
+    - GPT-3.5-turbo for cost-effective scenarios
+    - Other models from the catalog
+  </Step>
+  
+  <Step title="2. Customizability">
+    Shape the model to fit your use case:
+    - Fine-tuning with domain data
+    - Custom prompts and instructions
+    - Model distillation
+    - Few-shot learning
+  </Step>
+  
+  <Step title="3. Knowledge and Tools">
+    Equip your agent with capabilities:
+    - File Search for document retrieval
+    - Code Interpreter for analysis
+    - Azure AI Search for enterprise data
+    - Azure Functions for system integration
+  </Step>
+  
+  <Step title="4. Orchestration">
+    Coordinate the full lifecycle:
+    - Handle tool calls automatically
+    - Update conversation state
+    - Manage retries and failures
+    - Log all outputs
+  </Step>
+  
+  <Step title="5. Observability">
+    Monitor and improve:
+    - Capture logs and traces
+    - Run evaluations
+    - Track performance metrics
+    - Integrate with Application Insights
+  </Step>
+  
+  <Step title="6. Trust">
+    Ensure reliability and safety:
+    - Microsoft Entra authentication
+    - RBAC and permissions
+    - Content filters
+    - Network isolation
+    - Data encryption
+  </Step>
+</Steps>
+
+The result is an agent ready for production: reliable, extensible, and safe to deploy.
+
+## Getting Started
+
+### Prerequisites
+
+- Azure subscription with permission to create Foundry resources
+- A Foundry project ([setup guide](/foundry/agents/environment-setup))
+- A deployed model compatible with agents
+
+### Quick Start
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+import os
+
+# Initialize client
+project = AIProjectClient(
+    endpoint=os.environ["PROJECT_ENDPOINT"],
+    credential=DefaultAzureCredential(),
+)
+
+# Create agent
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="customer-support",
+    instructions="You are a helpful customer support assistant.",
+)
+
+# Create thread
+thread = project.agents.threads.create()
+
+# Send message
+message = project.agents.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Hello, I need help with my order.",
+)
+
+# Run agent
+run = project.agents.runs.create_and_poll(
+    thread_id=thread.id,
+    agent_id=agent.id
+)
+
+# Get response
+if run.status == "completed":
+    messages = project.agents.messages.list(thread_id=thread.id)
+    for msg in messages:
+        print(f"{msg['role']}: {msg['content']}")
+```
+
+```csharp C#
+using Azure.AI.Agents.Persistent;
+using Azure.Identity;
+
+var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
+PersistentAgentsClient client = new(projectEndpoint, new DefaultAzureCredential());
+
+// Create agent
+PersistentAgent agent = client.Administration.CreateAgent(
+    model: "gpt-4o",
+    name: "customer-support",
+    instructions: "You are a helpful customer support assistant."
+);
+
+// Create thread
+PersistentAgentThread thread = client.Threads.CreateThread();
+
+// Send message
+client.Messages.CreateMessage(
+    thread.Id,
+    MessageRole.User,
+    "Hello, I need help with my order."
+);
+
+// Run agent
+ThreadRun run = client.Runs.CreateRun(thread.Id, agent.Id);
+
+// Wait for completion
+do
+{
+    Thread.Sleep(TimeSpan.FromMilliseconds(500));
+    run = client.Runs.GetRun(thread.Id, run.Id);
+}
+while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
+
+// Get response
+if (run.Status == RunStatus.Completed)
+{
+    var messages = client.Messages.GetMessages(thread.Id);
+    foreach (var message in messages)
+    {
+        Console.WriteLine($"{message.Role}: {message.ContentItems[0]}");
+    }
+}
+```
+</CodeGroup>
+
+## Setup Options
+
+Agent Service offers three environment configurations:
+
+<Tabs>
+  <Tab title="Basic Setup">
+    **Quick start with managed resources**
+    
+    - Platform-managed storage
+    - Fastest setup time
+    - Compatible with OpenAI Assistants API
+    - Supports non-OpenAI models
+    - Includes Azure AI Search and Bing tools
+    
+    **Best for**: Development, testing, proof of concepts
+  </Tab>
+  
+  <Tab title="Standard Setup">
+    **Enterprise data control**
+    
+    - Bring your own Azure Storage
+    - Bring your own Azure Cosmos DB
+    - Bring your own Azure AI Search
+    - Customer-managed encryption keys
+    - Full data ownership
+    
+    **Best for**: Production workloads, compliance requirements
+  </Tab>
+  
+  <Tab title="Standard with Private Network">
+    **Maximum security**
+    
+    - Everything in Standard Setup
+    - Private virtual network support
+    - No public network access
+    - Data exfiltration prevention
+    - Secure agent communication
+    
+    **Best for**: Highly regulated industries, sensitive data
+  </Tab>
+</Tabs>
+
+## Supported Models
+
+Agent Service supports multiple model families:
+
+| Model Family | Models | Best For |
+|--------------|--------|----------|
+| Azure OpenAI | GPT-4o, GPT-4, GPT-3.5-turbo | General purpose, tool calling |
+| Foundry Direct | DeepSeek, xAI | Latest innovations |
+| Partner Models | Llama 3, Claude, Mistral | Specialized tasks |
+
+For the latest model support, see [Models that inform agents](/foundry/agents/concepts/models).
+
+## Security and Compliance
+
+### Safety Controls
+
+- **Content Filters**: Block harmful inputs and outputs
+- **Prompt Injection Protection**: Defend against XPIA attacks
+- **Jailbreak Detection**: Identify attempts to bypass safety
+- **Policy Enforcement**: Govern all agent outputs
+
+### Data Controls
+
+- **Network Isolation**: Private endpoints and VNet support
+- **Data Residency**: Choose your storage location
+- **Encryption**: At-rest and in-transit encryption
+- **Customer-Managed Keys**: Full control over encryption
+
+### Access Controls
+
+- **Microsoft Entra ID**: Enterprise authentication
+- **RBAC**: Fine-grained permissions
+- **Managed Identities**: Secure service-to-service auth
+- **Audit Logs**: Complete activity tracking
+
+## Business Continuity
+
+Agent Service supports resilience through customer-provisioned resources:
+
+- **Azure Cosmos DB**: Provision your own account for BCDR
+- **Multi-Region**: Automatic failover to secondary regions
+- **State Preservation**: All agent state in your Cosmos DB
+- **Recovery**: Seamless continuation after outages
+
+For configuration guidance, see [Use your own resources](/foundry/agents/how-to/use-your-own-resources).
+
+## Pricing
+
+Using Agent Service incurs costs from:
+
+- **Model deployments**: Token-based or provisioned throughput
+- **Azure resources**: Storage, Cosmos DB, AI Search (if using Standard Setup)
+- **Tool usage**: Code Interpreter sessions (additional charges)
+- **Data transfer**: Network egress charges
+
+To understand cost drivers, see [Plan and manage costs](/foundry/concepts/manage-costs).
+
+## Regional Availability
+
+Agent Service availability varies by region and model. Check:
+- [Service limits and quotas](/foundry/agents/quotas-limits)
+- [Model and region support](/foundry/agents/concepts/models)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/foundry/agents/environment-setup">
+    Deploy your agent infrastructure
+  </Card>
+  <Card title="Standard Setup" icon="shield-check" href="/foundry/agents/standard-setup">
+    Configure enterprise features
+  </Card>
+  <Card title="Threads & Runs" icon="messages" href="/foundry/agents/threads-runs-messages">
+    Understand agent execution
+  </Card>
+  <Card title="Agent Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Explore built-in capabilities
+  </Card>
+</CardGroup>

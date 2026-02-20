@@ -1,0 +1,744 @@
+---
+title: Azure Machine Learning Overview
+description: Cloud service for accelerating and managing the complete machine learning lifecycle with enterprise MLOps capabilities.
+---
+
+# Azure Machine Learning
+
+Azure Machine Learning is a cloud service that accelerates and manages the machine learning (ML) project lifecycle. ML professionals, data scientists, and engineers use it in their daily workflows to train and deploy models and manage machine learning operations (MLOps).
+
+<CardGroup cols={2}>
+  <Card title="Train Models" icon="graduation-cap">
+    Train custom models or use pre-built models from open-source frameworks
+  </Card>
+  
+  <Card title="Deploy at Scale" icon="rocket">
+    Deploy models as managed endpoints for real-time or batch scoring
+  </Card>
+  
+  <Card title="MLOps" icon="gear">
+    Manage the complete model lifecycle with enterprise operations
+  </Card>
+  
+  <Card title="Collaborate" icon="users">
+    Team workflows with shared notebooks, compute, and environments
+  </Card>
+</CardGroup>
+
+## What is Azure Machine Learning?
+
+You can create a model in Machine Learning or use a model built from an open-source platform, such as PyTorch, TensorFlow, or scikit-learn. MLOps tools help you monitor, retrain, and redeploy models throughout their lifecycle.
+
+<Tip>
+  **Free Trial!** If you don't have an Azure subscription, create a free account to try Azure Machine Learning. You get credits to spend on Azure services.
+</Tip>
+
+## Who is it For?
+
+Azure Machine Learning is designed for individuals and teams implementing MLOps within their organization to bring ML models into production in a secure and auditable environment:
+
+<Tabs>
+  <Tab title="Data Scientists">
+    **For Model Development**
+    
+    - Jupyter notebooks in the cloud
+    - Experiment tracking and versioning
+    - Automated ML for rapid prototyping
+    - Model catalog with LLMs and foundation models
+    - Visual designer for no-code ML
+  </Tab>
+  
+  <Tab title="ML Engineers">
+    **For Production Deployment**
+    
+    - MLOps with CI/CD integration
+    - Model monitoring and retraining
+    - Managed inference endpoints
+    - Pipeline orchestration
+    - Resource optimization
+  </Tab>
+  
+  <Tab title="Application Developers">
+    **For Integration**
+    
+    - REST APIs for model inference
+    - Real-time and batch endpoints
+    - SDK integration in apps
+    - Containerized deployments
+    - Scalable serving infrastructure
+  </Tab>
+  
+  <Tab title="Platform Developers">
+    **For Automation**
+    
+    - Azure Resource Manager APIs
+    - Terraform and IaC support
+    - Custom tooling development
+    - Enterprise integration
+    - Multi-workspace management
+  </Tab>
+</Tabs>
+
+## Core Capabilities
+
+### Productivity for Everyone
+
+ML projects often require a team with varied skills. Machine Learning provides tools for everyone:
+
+<Steps>
+  <Step title="Collaborate">
+    Share notebooks, compute resources, serverless compute, data, and environments with your team.
+  </Step>
+  
+  <Step title="Ensure Fairness">
+    Develop models with fairness and explainability, tracking and auditability for lineage and compliance.
+  </Step>
+  
+  <Step title="Deploy Efficiently">
+    Deploy ML models quickly at scale and manage them with MLOps governance.
+  </Step>
+  
+  <Step title="Run Anywhere">
+    Execute machine learning workloads anywhere with built-in governance, security, and compliance.
+  </Step>
+</Steps>
+
+### Cross-Compatible Platform
+
+Use your preferred tools to get the job done:
+
+<CardGroup cols={2}>
+  <Card title="Azure ML Studio" icon="window">
+    Web-based UI for no-code and code-first experiences
+  </Card>
+  
+  <Card title="Python SDK (v2)" icon="python">
+    Comprehensive Python library for ML workflows
+  </Card>
+  
+  <Card title="Azure CLI (v2)" icon="terminal">
+    Command-line interface for automation
+  </Card>
+  
+  <Card title="REST APIs" icon="code">
+    Azure Resource Manager APIs for integration
+  </Card>
+</CardGroup>
+
+## Azure Machine Learning Studio
+
+The [studio](https://ml.azure.com) offers multiple authoring experiences:
+
+### Notebooks
+
+Write and run code in managed Jupyter Notebook servers directly integrated in the studio:
+
+```python
+from azure.ai.ml import MLClient
+from azure.identity import DefaultAzureCredential
+from azure.ai.ml.entities import Model
+
+# Connect to workspace
+ml_client = MLClient(
+    DefaultAzureCredential(),
+    subscription_id="your-subscription-id",
+    resource_group_name="your-resource-group",
+    workspace_name="your-workspace"
+)
+
+# Register a model
+model = Model(
+    path="./model",
+    name="my-model",
+    description="Classification model",
+    type="custom_model"
+)
+
+ml_client.models.create_or_update(model)
+```
+
+Or open notebooks in [VS Code](https://code.visualstudio.com) on the web or desktop.
+
+### Designer
+
+Drag-and-drop interface to create ML pipelines without writing code:
+
+- Visual pipeline creation
+- Pre-built components
+- Custom component support
+- Real-time validation
+- One-click deployment
+
+### Automated Machine Learning
+
+Let Azure ML automatically find the best model for your data:
+
+<Tabs>
+  <Tab title="Classification">
+    Predict categories:
+    - Binary classification
+    - Multi-class classification
+    - Automatic feature engineering
+    - Model explainability
+  </Tab>
+  
+  <Tab title="Regression">
+    Predict numeric values:
+    - Linear regression
+    - Tree-based models
+    - Ensemble methods
+    - Hyperparameter tuning
+  </Tab>
+  
+  <Tab title="Forecasting">
+    Time series prediction:
+    - Automatic seasonality detection
+    - Multiple time series
+    - Holiday effects
+    - External regressors
+  </Tab>
+  
+  <Tab title="Computer Vision">
+    Image tasks:
+    - Image classification
+    - Object detection
+    - Instance segmentation
+    - Transfer learning
+  </Tab>
+</Tabs>
+
+```python
+from azure.ai.ml import automl
+
+# Configure AutoML
+classification_job = automl.classification(
+    training_data=training_data,
+    target_column_name="target",
+    primary_metric="accuracy",
+    n_cross_validations=5,
+    enable_model_explainability=True
+)
+
+# Submit job
+returned_job = ml_client.jobs.create_or_update(classification_job)
+```
+
+### Data Labeling
+
+Efficiently coordinate labeling projects:
+
+- **Image Labeling**: Bounding boxes, polygons, classification
+- **Text Labeling**: Named entity recognition, text classification
+- **ML-Assisted Labeling**: Speed up labeling with pre-trained models
+- **Consensus**: Multiple labelers for quality assurance
+
+## Work with LLMs and Generative AI
+
+Azure Machine Learning includes tools for building Generative AI applications:
+
+### Model Catalog
+
+The model catalog features hundreds of models from leading providers:
+
+<CardGroup cols={3}>
+  <Card title="Azure OpenAI">
+    - GPT-4, GPT-4 Turbo
+    - GPT-3.5 Turbo
+    - Embeddings
+    - DALL-E
+  </Card>
+  
+  <Card title="Open Source">
+    - Llama 3 (Meta)
+    - Mistral models
+    - Falcon
+    - BERT variants
+  </Card>
+  
+  <Card title="Specialized">
+    - Cohere models
+    - NVIDIA models
+    - HuggingFace models
+    - Custom fine-tuned models
+  </Card>
+</CardGroup>
+
+### Prompt Flow
+
+Streamline the development cycle of LLM applications:
+
+```python
+from promptflow import PFClient
+from promptflow.entities import AzureOpenAIConnection
+
+pf = PFClient()
+
+# Create a flow
+flow = pf.flows.create_or_update(
+    flow="./my-flow",
+    display_name="QA Flow"
+)
+
+# Test the flow
+result = pf.flows.test(
+    flow=flow,
+    inputs={"question": "What is Azure ML?"}
+)
+
+print(result)
+```
+
+**Prompt Flow Features:**
+- Visual flow designer
+- Prompt templates and variants
+- Built-in LLM tools
+- Evaluation metrics
+- Deployment to endpoints
+- Integration with AI Search
+
+<Note>
+  Use [Microsoft Foundry](/services/ai-foundry) for the latest agent-based LLM capabilities. Azure ML is recommended for custom model training and MLOps.
+</Note>
+
+## Training Models
+
+### Open and Interoperable
+
+Use models created in common Python frameworks:
+
+<Tabs>
+  <Tab title="PyTorch">
+    ```python
+    import torch
+    import torch.nn as nn
+    from azure.ai.ml import command
+    
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml:pytorch-env:1",
+        compute="gpu-cluster",
+        distribution={
+            "type": "PyTorch",
+            "process_count_per_instance": 4
+        }
+    )
+    ```
+  </Tab>
+  
+  <Tab title="TensorFlow">
+    ```python
+    import tensorflow as tf
+    from azure.ai.ml import command
+    
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml:tensorflow-env:1",
+        compute="gpu-cluster",
+        distribution={
+            "type": "TensorFlow",
+            "worker_count": 4
+        }
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Scikit-learn">
+    ```python
+    from sklearn.ensemble import RandomForestClassifier
+    from azure.ai.ml import command
+    
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml:sklearn-env:1",
+        compute="cpu-cluster"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+**Also Supported:**
+- XGBoost
+- LightGBM
+- R and .NET
+- Custom frameworks
+
+### Distributed Training
+
+Scale training with multinode distributed computing:
+
+```python
+from azure.ai.ml import command
+from azure.ai.ml.entities import MpiDistribution
+
+job = command(
+    code="./src",
+    command="python train.py --epochs 100 --batch-size 64",
+    environment="azureml:pytorch-gpu:1",
+    compute="gpu-cluster",
+    distribution=MpiDistribution(
+        process_count_per_instance=4
+    ),
+    resources={
+        "instance_count": 4,
+        "instance_type": "Standard_NC24s_v3"
+    }
+)
+```
+
+**Distribution Strategies:**
+- **PyTorch**: Distributed Data Parallel (DDP)
+- **TensorFlow**: MultiWorkerMirroredStrategy
+- **MPI**: Horovod for custom frameworks
+- **Spark**: Apache Spark on Synapse clusters
+
+### Hyperparameter Tuning
+
+Automate hyperparameter optimization:
+
+```python
+from azure.ai.ml.sweep import Choice, Uniform
+
+sweep_job = command(
+    code="./src",
+    command="python train.py --lr ${{inputs.learning_rate}} --batch ${{inputs.batch_size}}",
+    inputs={
+        "learning_rate": Uniform(min_value=0.0001, max_value=0.1),
+        "batch_size": Choice([16, 32, 64, 128])
+    },
+    compute="gpu-cluster",
+    environment="azureml:pytorch-env:1"
+)
+
+sweep_job.set_limits(max_total_trials=20, max_concurrent_trials=4)
+sweep_job.set_objective(goal="minimize", primary_metric="loss")
+```
+
+## Deploying Models
+
+Bring models into production with managed endpoints:
+
+### Real-Time Endpoints
+
+Low-latency inference for online scenarios:
+
+```python
+from azure.ai.ml.entities import ManagedOnlineEndpoint, ManagedOnlineDeployment
+
+# Create endpoint
+endpoint = ManagedOnlineEndpoint(
+    name="my-endpoint",
+    auth_mode="key"
+)
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+
+# Create deployment
+deployment = ManagedOnlineDeployment(
+    name="blue",
+    endpoint_name="my-endpoint",
+    model=model,
+    instance_type="Standard_DS3_v2",
+    instance_count=2
+)
+ml_client.online_deployments.begin_create_or_update(deployment)
+
+# Set traffic
+endpoint.traffic = {"blue": 100}
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+```
+
+### Batch Endpoints
+
+Process large volumes asynchronously:
+
+```python
+from azure.ai.ml.entities import BatchEndpoint, BatchDeployment
+
+# Create batch endpoint
+batch_endpoint = BatchEndpoint(
+    name="my-batch-endpoint",
+    description="Batch scoring endpoint"
+)
+ml_client.batch_endpoints.begin_create_or_update(batch_endpoint)
+
+# Create deployment
+batch_deployment = BatchDeployment(
+    name="default",
+    endpoint_name="my-batch-endpoint",
+    model=model,
+    compute="cpu-cluster",
+    instance_count=5,
+    max_concurrency_per_instance=2,
+    mini_batch_size=10
+)
+ml_client.batch_deployments.begin_create_or_update(batch_deployment)
+
+# Invoke batch job
+job = ml_client.batch_endpoints.invoke(
+    endpoint_name="my-batch-endpoint",
+    input=Input(path="azureml:my-data:1")
+)
+```
+
+### Blue-Green Deployments
+
+Safely roll out new model versions:
+
+```python
+# Deploy new version (green)
+green_deployment = ManagedOnlineDeployment(
+    name="green",
+    endpoint_name="my-endpoint",
+    model=new_model,
+    instance_type="Standard_DS3_v2",
+    instance_count=2
+)
+ml_client.online_deployments.begin_create_or_update(green_deployment)
+
+# Gradually shift traffic
+endpoint.traffic = {"blue": 90, "green": 10}  # Test with 10%
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+
+# Full cutover
+endpoint.traffic = {"green": 100}
+ml_client.online_endpoints.begin_create_or_update(endpoint)
+```
+
+## MLOps: DevOps for ML
+
+Manage the complete model lifecycle with enterprise operations:
+
+### ML Pipelines
+
+Create reproducible workflows:
+
+```python
+from azure.ai.ml import dsl, Input, Output
+
+@dsl.pipeline(compute="cpu-cluster")
+def training_pipeline(input_data):
+    # Data prep component
+    prep_data = data_prep_component(
+        raw_data=input_data
+    )
+    
+    # Train component
+    train_model = train_component(
+        training_data=prep_data.outputs.processed_data
+    )
+    
+    # Evaluate component
+    evaluate = evaluate_component(
+        model=train_model.outputs.model,
+        test_data=prep_data.outputs.test_data
+    )
+    
+    return {
+        "model": train_model.outputs.model,
+        "metrics": evaluate.outputs.metrics
+    }
+
+# Create and run pipeline
+pipeline = training_pipeline(
+    input_data=Input(path="azureml:training-data:1")
+)
+pipeline_job = ml_client.jobs.create_or_update(pipeline)
+```
+
+### Model Registry
+
+Version and track all models:
+
+```python
+# Register model
+model = Model(
+    path="./outputs/model",
+    name="fraud-detector",
+    version="2",
+    description="Updated model with better recall",
+    tags={"task": "classification", "framework": "sklearn"},
+    properties={"accuracy": "0.95", "recall": "0.92"}
+)
+registered_model = ml_client.models.create_or_update(model)
+
+# List versions
+models = ml_client.models.list(name="fraud-detector")
+for m in models:
+    print(f"Version {m.version}: {m.properties}")
+```
+
+### Monitoring and Logging
+
+Track model performance in production:
+
+```python
+# Enable data collection
+deployment = ManagedOnlineDeployment(
+    name="production",
+    endpoint_name="my-endpoint",
+    model=model,
+    data_collector={
+        "collections": {
+            "model_inputs": {"enabled": True},
+            "model_outputs": {"enabled": True}
+        }
+    }
+)
+
+# Monitor metrics
+from azure.monitor.query import MetricsQueryClient
+
+metrics_client = MetricsQueryClient(credential)
+response = metrics_client.query_resource(
+    resource_id=endpoint_resource_id,
+    metric_names=["RequestLatency", "RequestsPerMinute"],
+    timespan=timedelta(hours=1)
+)
+```
+
+### CI/CD Integration
+
+Integrate with Azure DevOps or GitHub Actions:
+
+```yaml
+# .github/workflows/train-deploy.yml
+name: Train and Deploy Model
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  train-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Install Azure ML CLI
+        run: az extension add -n ml
+      
+      - name: Train Model
+        run: |
+          az ml job create --file train-job.yml \
+            --workspace-name ${{ secrets.WORKSPACE_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }}
+      
+      - name: Deploy Model
+        run: |
+          az ml online-deployment create --file deployment.yml \
+            --workspace-name ${{ secrets.WORKSPACE_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }}
+```
+
+## Enterprise Integration
+
+Azure Machine Learning integrates with the Azure ecosystem:
+
+<CardGroup cols={2}>
+  <Card title="Azure Synapse" icon="database">
+    Process and stream data with Spark
+  </Card>
+  
+  <Card title="Azure Arc" icon="circle-nodes">
+    Run Azure services in Kubernetes
+  </Card>
+  
+  <Card title="Azure Storage" icon="box">
+    Store training data and models
+  </Card>
+  
+  <Card title="Azure App Service" icon="window">
+    Deploy ML-powered web apps
+  </Card>
+  
+  <Card title="Microsoft Purview" icon="shield">
+    Data governance and cataloging
+  </Card>
+  
+  <Card title="Azure Key Vault" icon="key">
+    Secure secrets management
+  </Card>
+</CardGroup>
+
+## Security and Compliance
+
+<Tabs>
+  <Tab title="Network Security">
+    - Azure Virtual Networks
+    - Private endpoints
+    - Network security groups
+    - Firewall rules
+    - VPN gateway support
+  </Tab>
+  
+  <Tab title="Identity & Access">
+    - Microsoft Entra ID
+    - Role-based access control (RBAC)
+    - Managed identities
+    - Service principals
+    - Conditional access
+  </Tab>
+  
+  <Tab title="Data Protection">
+    - Encryption at rest
+    - Encryption in transit
+    - Customer-managed keys
+    - Data isolation
+    - Compliance certifications
+  </Tab>
+</Tabs>
+
+## Getting Started
+
+<Steps>
+  <Step title="Create a Workspace">
+    Sign in to [Azure ML Studio](https://ml.azure.com) and create your workspace.
+  </Step>
+  
+  <Step title="Create Compute">
+    Set up a compute instance for development or clusters for training.
+  </Step>
+  
+  <Step title="Explore Samples">
+    Browse sample notebooks to learn best practices.
+  </Step>
+  
+  <Step title="Train Your Model">
+    Submit training jobs using the SDK, CLI, or studio.
+  </Step>
+  
+  <Step title="Deploy">
+    Create managed endpoints for real-time or batch inference.
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started in minutes
+  </Card>
+  
+  <Card title="Tutorials" icon="book">
+    Step-by-step guides
+  </Card>
+  
+  <Card title="Python SDK Docs" icon="python">
+    Complete SDK reference
+  </Card>
+  
+  <Card title="GitHub Samples" icon="github">
+    Code examples and templates
+  </Card>
+</CardGroup>
+
+<Note>
+  Azure Machine Learning doesn't store or process your data outside of the region where you deploy your workspace.
+</Note>

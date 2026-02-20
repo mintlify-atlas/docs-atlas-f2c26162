@@ -1,0 +1,453 @@
+---
+title: Vector Queries
+description: Learn how to execute vector similarity searches using embeddings in Azure AI Search.
+---
+
+# Vector Queries in Azure AI Search
+
+Vector queries find semantically similar content using numeric embeddings and nearest neighbor algorithms.
+
+## Prerequisites
+
+- Vector index with vector fields
+- Embedding model (Azure OpenAI, etc.)
+- Optional: Vectorizer for query-time conversion
+
+## Basic Vector Query
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "vector",
+      "vector": [
+        -0.009154141,
+        0.018708462,
+        // ... 1536 dimensions
+        -0.00086512347
+      ],
+      "fields": "contentVector",
+      "k": 50
+    }
+  ],
+  "select": "title, content, category"
+}
+```
+
+**Parameters**:
+- `kind`: "vector" for embedding arrays
+- `vector`: Query embedding (same dimensions as field)
+- `fields`: Vector field(s) to search
+- `k`: Number of nearest neighbors to return
+
+## Generate Query Embeddings
+
+### Azure OpenAI
+
+```http
+POST https://{openai}.openai.azure.com/openai/deployments/{model}/embeddings?api-version=2024-02-01
+Content-Type: application/json
+api-key: {key}
+
+{
+  "input": "luxury hotel with ocean view"
+}
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "embedding": [
+        -0.009154141,
+        0.018708462,
+        // ... 1536 values
+      ]
+    }
+  ]
+}
+```
+
+### Use Same Model
+
+<Warning>
+  Always use the same embedding model for indexing and querying. Mixing models produces poor results.
+</Warning>
+
+## Integrated Vectorization
+
+Let Azure AI Search handle vectorization:
+
+### Configure Vectorizer
+
+```json
+{
+  "vectorizers": [
+    {
+      "name": "my-openai-vectorizer",
+      "kind": "azureOpenAI",
+      "azureOpenAIParameters": {
+        "resourceUri": "https://my-openai.openai.azure.com",
+        "deploymentId": "text-embedding-ada-002",
+        "apiKey": "..."
+      }
+    }
+  ]
+}
+```
+
+### Query with Text
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "text",
+      "text": "luxury hotel with ocean view",
+      "fields": "descriptionVector",
+      "k": 50
+    }
+  ]
+}
+```
+
+**Benefits**:
+- No manual embedding generation
+- Consistent model usage
+- Simplified queries
+
+## Multiple Vector Fields
+
+Search across multiple vector fields:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "vector",
+      "vector": [...],
+      "fields": "titleVector,contentVector,synopsisVector",
+      "k": 50
+    }
+  ]
+}
+```
+
+<Note>
+  All fields must use embeddings from the same model and have the same dimensions.
+</Note>
+
+## Multiple Vector Queries
+
+Execute multiple vector queries in parallel:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "vector",
+      "vector": [...],  // text embedding
+      "fields": "textVector",
+      "k": 50,
+      "weight": 1.0
+    },
+    {
+      "kind": "vector",
+      "vector": [...],  // image embedding
+      "fields": "imageVector",
+      "k": 50,
+      "weight": 2.0
+    }
+  ]
+}
+```
+
+**Use case**: Multimodal search with CLIP embeddings
+
+Results merged using Reciprocal Rank Fusion (RRF).
+
+## Vector Weighting
+
+Adjust relative importance:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],
+      "fields": "titleVector",
+      "k": 50,
+      "weight": 2.0  // 2x importance
+    },
+    {
+      "vector": [...],
+      "fields": "contentVector",
+      "k": 50,
+      "weight": 1.0  // baseline
+    }
+  ]
+}
+```
+
+**Default weight**: 1.0
+
+## Filtering Vector Results
+
+Apply filters to vector queries:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],
+      "fields": "contentVector",
+      "k": 50
+    }
+  ],
+  "filter": "category eq 'Hotels' and rating ge 4.5",
+  "vectorFilterMode": "postFilter"
+}
+```
+
+### Filter Modes
+
+- **preFilter**: Apply before vector search (faster, fewer candidates)
+- **postFilter**: Apply after vector search (more candidates, better recall)
+
+## Exhaustive KNN
+
+Force exact search instead of approximate:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],
+      "fields": "contentVector",
+      "k": 50,
+      "exhaustive": true
+    }
+  ]
+}
+```
+
+**Use when**:
+- Maximum accuracy required
+- Small dataset
+- Willing to accept slower queries
+
+## Threshold Filtering (Preview)
+
+Exclude low-similarity results:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],
+      "fields": "contentVector",
+      "k": 50,
+      "threshold": {
+        "kind": "vectorSimilarity",
+        "value": 0.8
+      }
+    }
+  ]
+}
+```
+
+**Effect**: Returns fewer than k results if similarities below 0.8
+
+## Query Response
+
+```json
+{
+  "@odata.count": 3,
+  "value": [
+    {
+      "@search.score": 0.89,
+      "id": "1",
+      "title": "Azure AI Search",
+      "content": "Fully managed search service..."
+    },
+    {
+      "@search.score": 0.85,
+      "title": "Vector Search",
+      "content": "Semantic similarity matching..."
+    }
+  ]
+}
+```
+
+**Score interpretation**:
+- Higher score = more similar
+- Range depends on similarity metric
+- Cosine: -1 to 1 (1 = identical)
+
+## Oversampling
+
+Request more candidates for reranking:
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],
+      "fields": "contentVector",
+      "k": 10,
+      "oversampling": 20.0
+    }
+  ]
+}
+```
+
+**Effect**: Retrieves k × oversampling candidates, reranks with uncompressed vectors, returns top k
+
+## Hybrid Vector + Text
+
+Combine for best results:
+
+```json
+{
+  "search": "luxury hotel ocean view",
+  "vectorQueries": [
+    {
+      "kind": "text",
+      "text": "luxury hotel ocean view",
+      "fields": "descriptionVector",
+      "k": 50
+    }
+  ],
+  "top": 10
+}
+```
+
+**Benefits**:
+- Keyword precision + semantic recall
+- RRF fusion
+- Better than either alone
+
+## Performance Optimization
+
+<AccordionGroup>
+  <Accordion title="Right-Size k">
+    - Request only needed results
+    - Typical: k=10-50
+    - Larger k = slower queries
+  </Accordion>
+  
+  <Accordion title="Use Compression">
+    - Enable scalar/binary quantization
+    - 75-96% size reduction
+    - Minimal accuracy loss with rescoring
+  </Accordion>
+  
+  <Accordion title="Tune HNSW">
+    - Adjust efSearch for accuracy vs speed
+    - Higher efSearch = more accurate, slower
+    - Default 500 works for most cases
+  </Accordion>
+  
+  <Accordion title="Pre-filter When Possible">
+    - Reduces search space
+    - Faster than post-filtering
+    - Better for selective filters
+  </Accordion>
+</AccordionGroup>
+
+## Common Patterns
+
+### Semantic Product Search
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "text",
+      "text": "comfortable running shoes for marathons",
+      "fields": "descriptionVector",
+      "k": 50
+    }
+  ],
+  "filter": "inStock eq true and price le 200",
+  "select": "name, description, price, rating"
+}
+```
+
+### Multimodal Image Search
+
+```json
+{
+  "vectorQueries": [
+    {
+      "kind": "vector",
+      "vector": [...],  // CLIP image embedding
+      "fields": "imageVector",
+      "k": 20
+    },
+    {
+      "kind": "text",
+      "text": "red sports car",
+      "fields": "textVector",
+      "k": 20,
+      "weight": 0.5
+    }
+  ]
+}
+```
+
+### Document Similarity
+
+```json
+{
+  "vectorQueries": [
+    {
+      "vector": [...],  // embedding of reference document
+      "fields": "contentVector",
+      "k": 10
+    }
+  ],
+  "filter": "documentId ne '{reference-doc-id}'",  // exclude self
+  "select": "documentId, title, summary"
+}
+```
+
+## Troubleshooting
+
+### Low Quality Results
+
+- Verify same embedding model for index and query
+- Check vector dimensions match
+- Ensure sufficient k value
+- Consider hybrid search instead
+
+### Slow Queries
+
+- Reduce k value
+- Enable compression
+- Use preFilter instead of postFilter
+- Tune HNSW efSearch parameter
+
+### No Results
+
+- Check filter conditions
+- Verify vector field name
+- Ensure index has vector data
+- Remove threshold if set too high
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Vector Index" icon="plus" href="/search/agentic/create-index">
+    Build a vector-enabled index
+  </Card>
+  
+  <Card title="Hybrid Search" icon="magnifying-glass" href="/search/concepts/hybrid-search">
+    Combine with keyword search
+  </Card>
+  
+  <Card title="Generate Embeddings" icon="wand-magic-sparkles" href="https://learn.microsoft.com/azure/search/vector-search-how-to-generate-embeddings">
+    Create embeddings from content
+  </Card>
+</CardGroup>

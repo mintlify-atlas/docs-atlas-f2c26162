@@ -1,0 +1,418 @@
+---
+title: 'Azure Machine Learning REST API'
+description: 'REST API reference for Azure Machine Learning model deployment and management'
+---
+
+# Azure Machine Learning REST API
+
+The Azure Machine Learning REST API enables you to create, manage, and deploy machine learning models using standard HTTP verbs. The API supports workspace management, model registration, online endpoints, and job execution.
+
+## Authentication
+
+Azure Machine Learning REST API uses OAuth2 service principal authentication.
+
+### Retrieve Authentication Token
+
+<Steps>
+  <Step title="Get Service Principal Credentials">
+    Obtain your tenant ID, client ID, and client secret from your Azure service principal.
+  </Step>
+  
+  <Step title="Request Access Token">
+    ```bash
+    curl -X POST https://login.microsoftonline.com/<TENANT-ID>/oauth2/token \
+      -d "grant_type=client_credentials&resource=https%3A%2F%2Fmanagement.azure.com%2F&client_id=<CLIENT-ID>&client_secret=<CLIENT-SECRET>"
+    ```
+  </Step>
+  
+  <Step title="Use Token in Requests">
+    Include the token in the Authorization header:
+    ```bash
+    Authorization: Bearer <ACCESS-TOKEN>
+    ```
+  </Step>
+</Steps>
+
+**Token Response:**
+
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": "3599",
+  "access_token": "YOUR-ACCESS-TOKEN"
+}
+```
+
+## Base URL
+
+```
+https://management.azure.com
+```
+
+## Workspaces
+
+### List Workspaces
+
+Retrieve all Azure Machine Learning workspaces in a resource group.
+
+**Endpoint:**
+
+```
+GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.MachineLearningServices/workspaces?api-version=2023-10-01
+```
+
+<ParamField path="subscriptionId" type="string" required>
+  Your Azure subscription ID
+</ParamField>
+
+<ParamField path="resourceGroupName" type="string" required>
+  Name of the resource group
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "value": [
+    {
+      "id": "/subscriptions/aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e/resourceGroups/MyResourceGroup/providers/Microsoft.MachineLearningServices/workspaces/my-workspace",
+      "name": "my-workspace",
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "location": "centralus",
+      "properties": {
+        "friendlyName": "My Workspace",
+        "creationTime": "2023-01-03T19:56:09.7588299+00:00",
+        "workspaceId": "cba12345-abab-abab-abab-ababab123456",
+        "discoveryUrl": "https://centralus.experiments.azureml.net/discovery"
+      }
+    }
+  ]
+}
+```
+
+### Create Workspace
+
+Create a new Azure Machine Learning workspace.
+
+**Endpoint:**
+
+```
+PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.MachineLearningServices/workspaces/{workspaceName}?api-version=2023-10-01
+```
+
+<ParamField body="location" type="string" required>
+  Azure region for the workspace
+</ParamField>
+
+<ParamField body="properties.storageAccount" type="string" required>
+  Resource ID of the Azure Storage account
+</ParamField>
+
+<ParamField body="properties.keyVault" type="string" required>
+  Resource ID of the Azure Key Vault
+</ParamField>
+
+<ParamField body="properties.applicationInsights" type="string" required>
+  Resource ID of Application Insights
+</ParamField>
+
+**Request:**
+
+```json
+{
+  "location": "eastus",
+  "identity": {
+    "type": "systemAssigned"
+  },
+  "properties": {
+    "friendlyName": "My ML Workspace",
+    "description": "Production workspace",
+    "storageAccount": "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Storage/storageAccounts/{storageAccount}",
+    "keyVault": "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Keyvault/vaults/{keyVault}",
+    "applicationInsights": "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.insights/components/{appInsights}"
+  }
+}
+```
+
+## Models
+
+### Register Model
+
+Register a trained model in your workspace.
+
+**Endpoint:**
+
+```
+PUT https://{region}.api.azureml.ms/modelmanagement/v1.0/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/models/{modelId}?api-version=2023-10-01
+```
+
+<ParamField path="modelId" type="string" required>
+  Unique identifier for the model
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Model name
+</ParamField>
+
+<ParamField body="version" type="integer" required>
+  Model version number
+</ParamField>
+
+<ParamField body="path" type="string" required>
+  Path to model files in datastore
+</ParamField>
+
+### List Models
+
+Retrieve all registered models in a workspace.
+
+**Endpoint:**
+
+```
+GET https://{region}.api.azureml.ms/modelmanagement/v1.0/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/models?api-version=2023-10-01
+```
+
+## Online Endpoints
+
+### Create Online Endpoint
+
+Deploy a model to an online endpoint for real-time inference.
+
+**Endpoint:**
+
+```
+PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/onlineEndpoints/{endpointName}?api-version=2024-04-01
+```
+
+<ParamField body="name" type="string" required>
+  Endpoint name (must be unique in the region)
+</ParamField>
+
+<ParamField body="properties.authMode" type="string">
+  Authentication mode: `Key` or `AADToken`
+</ParamField>
+
+<ParamField body="properties.compute" type="string" required>
+  Compute resource for the endpoint
+</ParamField>
+
+**Request:**
+
+```json
+{
+  "name": "my-endpoint",
+  "location": "eastus",
+  "properties": {
+    "authMode": "Key",
+    "description": "Production endpoint"
+  }
+}
+```
+
+### Create Deployment
+
+Create a deployment under an online endpoint.
+
+**Endpoint:**
+
+```
+PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/onlineEndpoints/{endpoint}/deployments/{deploymentName}?api-version=2024-04-01
+```
+
+<ParamField body="model" type="string" required>
+  Resource ID of the registered model
+</ParamField>
+
+<ParamField body="codeConfiguration" type="object">
+  Scoring script configuration:
+  - `codeId`: Resource ID of the code
+  - `scoringScript`: Name of the scoring script
+</ParamField>
+
+<ParamField body="instanceType" type="string" required>
+  VM size (e.g., `Standard_DS3_v2`)
+</ParamField>
+
+<ParamField body="instanceCount" type="integer" required>
+  Number of instances
+</ParamField>
+
+### Invoke Endpoint
+
+Score data using a deployed model.
+
+**Endpoint:**
+
+```
+POST https://{endpoint-uri}/score
+```
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token or endpoint key
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  `application/json`
+</ParamField>
+
+**Request:**
+
+```json
+{
+  "data": [
+    [1, 2, 3, 4, 5],
+    [6, 7, 8, 9, 10]
+  ]
+}
+```
+
+## Jobs
+
+### Create Training Job
+
+Submit a training job to Azure Machine Learning.
+
+**Endpoint:**
+
+```
+PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/jobs/{jobId}?api-version=2024-04-01
+```
+
+<ParamField body="properties.jobType" type="string" required>
+  Job type: `Command`, `Sweep`, `Pipeline`
+</ParamField>
+
+<ParamField body="properties.compute" type="string" required>
+  Compute resource ID
+</ParamField>
+
+<ParamField body="properties.command" type="string" required>
+  Command to execute
+</ParamField>
+
+<ParamField body="properties.environment" type="string" required>
+  Environment resource ID
+</ParamField>
+
+### Get Job Status
+
+Retrieve job details and status.
+
+**Endpoint:**
+
+```
+GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/jobs/{jobId}?api-version=2024-04-01
+```
+
+**Response:**
+
+```json
+{
+  "id": "job-id",
+  "name": "training-job",
+  "properties": {
+    "status": "Completed",
+    "startTime": "2024-01-15T10:30:00Z",
+    "endTime": "2024-01-15T11:45:00Z",
+    "jobType": "Command"
+  }
+}
+```
+
+### List Jobs
+
+Get all jobs in a workspace.
+
+**Endpoint:**
+
+```
+GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/jobs?api-version=2024-04-01
+```
+
+## Compute
+
+### Create Compute Resource
+
+Provision a compute cluster for training.
+
+**Endpoint:**
+
+```
+PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/computes/{computeName}?api-version=2023-10-01
+```
+
+<ParamField body="properties.computeType" type="string" required>
+  Compute type: `AmlCompute`, `ComputeInstance`, `AKS`
+</ParamField>
+
+<ParamField body="properties.properties.vmSize" type="string" required>
+  VM size (e.g., `Standard_D1`)
+</ParamField>
+
+<ParamField body="properties.properties.scaleSettings" type="object" required>
+  Scaling configuration:
+  - `minNodeCount`: Minimum nodes
+  - `maxNodeCount`: Maximum nodes
+  - `nodeIdleTimeBeforeScaleDown`: Idle time before scale down
+</ParamField>
+
+**Request:**
+
+```json
+{
+  "location": "eastus",
+  "properties": {
+    "computeType": "AmlCompute",
+    "properties": {
+      "vmSize": "Standard_D1",
+      "vmPriority": "Dedicated",
+      "scaleSettings": {
+        "maxNodeCount": 4,
+        "minNodeCount": 0,
+        "nodeIdleTimeBeforeScaleDown": "PT30M"
+      }
+    }
+  }
+}
+```
+
+### List Compute Resources
+
+**Endpoint:**
+
+```
+GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{workspace}/computes?api-version=2023-10-01
+```
+
+## API Versioning
+
+<Info>
+Always specify the `api-version` parameter. Current stable version: `2023-10-01`
+</Info>
+
+The API version ensures compatibility as the service evolves. Different services may use different versions.
+
+## Error Responses
+
+All errors follow Azure standard error format:
+
+```json
+{
+  "error": {
+    "code": "ResourceNotFound",
+    "message": "The specified resource was not found",
+    "details": []
+  }
+}
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="/sdk/python">
+    Use the Python SDK for Azure ML
+  </Card>
+  <Card title="Azure CLI" icon="terminal" href="https://docs.microsoft.com/cli/azure/ml">
+    Command-line interface for Azure ML
+  </Card>
+</CardGroup>

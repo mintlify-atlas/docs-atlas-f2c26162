@@ -1,0 +1,74 @@
+---
+title: Model Region Support
+description: Check Azure region availability for AI models in Microsoft Foundry including Azure OpenAI and Foundry Direct models.
+---
+
+# Model Region Support
+
+Model availability varies by Azure region. Check this guide to plan your deployments.
+
+## Key Regions
+
+### Americas
+- **East US**: Most models available
+- **East US 2**: Most models available
+- **West US**: Limited models
+- **Canada East**: Most models available
+
+### Europe
+- **West Europe**: Most models available
+- **North Europe**: Most models available
+- **France Central**: Selected models
+- **Switzerland North**: Selected models
+
+### Asia Pacific
+- **Southeast Asia**: Most models available
+- **Australia East**: Most models available
+- **Japan East**: Most models available
+
+## Model Availability
+
+### GPT-4o
+- East US, West Europe, Sweden Central
+- Global Standard SKU available
+
+### GPT-4
+- East US, West Europe, France Central
+- Standard and Provisioned
+
+### GPT-3.5-turbo
+- Available in most regions
+- Lowest cost option
+
+### Foundry Direct Models
+- Limited regional availability
+- Check model card for specifics
+
+## Planning Considerations
+
+<Accordion title="Data Residency">
+Choose regions that meet your compliance requirements
+</Accordion>
+
+<Accordion title="Latency">
+Deploy close to your users for best performance
+</Accordion>
+
+<Accordion title="Quota Availability">
+Some regions have limited quota
+</Accordion>
+
+<Accordion title="Feature Availability">
+New features may roll out to specific regions first
+</Accordion>
+
+## Checking Availability
+
+Use Azure Portal to check real-time availability:
+
+1. Navigate to Foundry portal
+2. Open Model Catalog
+3. Select model
+4. View **Regional Availability** tab
+
+See [Model Deployment](/foundry/models/deployment) for deployment instructions.

@@ -1,0 +1,315 @@
+---
+title: Quickstart - Full-Text Search
+description: Learn how to create, load, and query your first search index using the Azure portal or REST API.
+---
+
+# Quickstart: Full-Text Search in Azure AI Search
+
+This quickstart shows you how to create your first search index using the Azure portal. You'll learn how to:
+
+- Create a search index with sample hotel data
+- Load data into the index
+- Query the index using Search Explorer
+- View and analyze search results
+
+## Prerequisites
+
+- An Azure subscription
+- An Azure AI Search service (any tier)
+- A web browser to access the Azure portal
+
+## Create an Index with Sample Data
+
+The quickest way to get started is using the Azure portal with built-in sample data.
+
+<Steps>
+  <Step title="Open Azure Portal">
+    Sign in to the [Azure portal](https://portal.azure.com) and navigate to your Azure AI Search service
+  </Step>
+  
+  <Step title="Start Import Wizard">
+    From the service dashboard, select **Import data** to launch the data import wizard
+  </Step>
+  
+  <Step title="Connect to Sample Data">
+    Choose **Samples** as the data source and select the **hotels-sample** dataset
+  </Step>
+  
+  <Step title="Configure Index">
+    Review the auto-generated index schema. The wizard detects fields and sets appropriate attributes:
+    - `HotelId`: Document key (required)
+    - `HotelName`: Searchable and retrievable
+    - `Description`: Searchable with full-text analysis
+    - `Rating`: Filterable and sortable
+    - `Location`: Geospatial point for proximity search
+  </Step>
+  
+  <Step title="Create Indexer">
+    Name your indexer `hotels-sample-indexer` and run it once to load the data
+  </Step>
+</Steps>
+
+## Monitor Indexing Progress
+
+You can monitor the creation and execution of the indexer in real-time.
+
+1. From the left navigation, select **Indexers**
+2. Find `hotels-sample-indexer` in the list
+3. Check the **Status** column:
+   - **In progress**: Indexer is currently running
+   - **Success**: All documents indexed successfully
+   - **Warning**: Some documents had issues but indexing completed
+
+The status page shows:
+- Total documents indexed
+- Number of documents succeeded/failed
+- Execution time
+
+## View Index Schema
+
+Once indexing completes, examine the index structure:
+
+1. Select **Indexes** from the left navigation
+2. Click on **hotels-sample-index**
+3. Select the **Fields** tab to view the schema
+
+### Understanding Field Attributes
+
+| Attribute | Purpose | Example |
+|-----------|---------|----------|
+| **key** | Unique document identifier | `HotelId` |
+| **searchable** | Full-text searchable | `Description` |
+| **filterable** | Can be used in filter expressions | `Rating gt 4` |
+| **sortable** | Can be used for ordering results | `orderby=Rating desc` |
+| **facetable** | Generates facet counts | `facets=["Category"]` |
+| **retrievable** | Included in search results | All display fields |
+
+## Query with Search Explorer
+
+Search Explorer is a built-in query tool in the Azure portal.
+
+### Basic Text Search
+
+1. Navigate to your index
+2. Select the **Search explorer** tab
+3. Enter a search query in the search box:
+
+```
+beach OR spa
+```
+
+This returns all documents containing either "beach" or "spa" in searchable fields.
+
+### JSON View for Advanced Queries
+
+For more control, switch to JSON view:
+
+1. Click **View** > **JSON view**
+2. Enter a JSON query:
+
+```json
+{
+    "search": "beach OR spa",
+    "select": "HotelId, HotelName, Description, Rating",
+    "filter": "Rating gt 4",
+    "top": 10,
+    "count": true
+}
+```
+
+**Query parameters explained:**
+- `search`: Full-text query string
+- `select`: Fields to return in results
+- `filter`: OData filter expression
+- `top`: Maximum results to return
+- `count`: Include total count of matches
+
+## Query Examples
+
+### Filter by Rating
+
+Find highly-rated hotels:
+
+```json
+{
+    "search": "*",
+    "filter": "Rating gt 4",
+    "orderby": "Rating desc"
+}
+```
+
+### Geospatial Search
+
+Find hotels within 5km of a location (Washington D.C.):
+
+```json
+{
+    "search": "*",
+    "filter": "geo.distance(Location, geography'POINT(-77.03241 38.90166)') le 5",
+    "select": "HotelName, Address/City"
+}
+```
+
+### Boolean Filter
+
+Find hotels with parking included:
+
+```json
+{
+    "search": "beach",
+    "filter": "ParkingIncluded eq true",
+    "count": true
+}
+```
+
+### Fuzzy Search
+
+Handle typos and misspellings:
+
+```json
+{
+    "queryType": "full",
+    "search": "seatle~",
+    "select": "HotelName, Address/City"
+}
+```
+
+The tilde (`~`) operator enables fuzzy matching, so "seatle" matches "Seattle".
+
+## Understanding Results
+
+Search results are returned in JSON format:
+
+```json
+{
+    "@odata.count": 3,
+    "value": [
+        {
+            "@search.score": 0.8,
+            "HotelId": "1",
+            "HotelName": "Ocean View Resort",
+            "Description": "Beautiful beachfront hotel with spa services",
+            "Rating": 4.5
+        }
+    ]
+}
+```
+
+**Response structure:**
+- `@odata.count`: Total number of matching documents
+- `@search.score`: Relevance score (higher is better)
+- `value`: Array of matching documents
+
+## Query Syntax Options
+
+Azure AI Search supports two query syntaxes:
+
+### Simple Syntax (Default)
+
+- Intuitive, familiar syntax
+- Boolean operators: `AND`, `OR`, `NOT`
+- Phrase search: `"exact phrase"`
+- Prefix search: `hotel*`
+
+**Example:**
+```
+ocean view AND spa -airport
+```
+
+### Full Lucene Syntax
+
+Enable with `"queryType": "full"`
+
+- Fuzzy search: `seattle~`
+- Proximity search: `"ocean view"~5`
+- Term boosting: `luxury^2 hotel`
+- Regular expressions: `/[mh]otel/`
+- Fielded search: `HotelName:ocean`
+
+**Example:**
+```json
+{
+    "queryType": "full",
+    "search": "HotelName:luxury^2 OR Description:beachfront"
+}
+```
+
+## Using the Mini-Map
+
+For long result sets, Search Explorer provides a mini-map:
+
+1. Look for the mini-map on the right side of results
+2. Click on any section to jump directly to that part of the output
+3. Useful for navigating large JSON responses
+
+## Add or Modify Fields
+
+You can extend your index with new fields:
+
+1. Go to the **Fields** tab
+2. Click **Add field**
+3. Specify:
+   - Field name
+   - Data type (Edm.String, Edm.Int32, etc.)
+   - Attributes (searchable, filterable, etc.)
+
+<Warning>
+  Existing fields cannot be modified once created. To change existing fields, you must create a new index and reload the data.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Query Performance">
+    - Use `select` to return only needed fields
+    - Apply filters before sorting for better performance
+    - Use `top` to limit result set size
+    - Consider caching frequently used queries
+  </Accordion>
+  
+  <Accordion title="Field Design">
+    - Make fields searchable only if needed for full-text search
+    - Use filterable for metadata and categorical data
+    - Set sortable only on fields that need ordering
+    - Mark key fields and internal IDs as non-searchable
+  </Accordion>
+  
+  <Accordion title="Query Tuning">
+    - Use simple syntax for user-facing search boxes
+    - Reserve full Lucene syntax for advanced users
+    - Test queries with representative data
+    - Monitor query performance with metrics
+  </Accordion>
+</AccordionGroup>
+
+## Clean Up Resources
+
+If you created a search service specifically for this quickstart:
+
+1. Navigate to the resource group
+2. Select **Delete resource group**
+3. Confirm deletion
+
+<Info>
+  Free tier search services (one per subscription) don't incur charges and don't need to be deleted unless you want to create another free service.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Vector Search" icon="diagram-project" href="/search/concepts/vector-search">
+    Learn about semantic similarity search with embeddings
+  </Card>
+  
+  <Card title="Create an Index" icon="plus" href="/search/indexing/overview">
+    Build a production-ready index with your own data
+  </Card>
+  
+  <Card title="Query Syntax" icon="code" href="/search/queries/full-text">
+    Master full-text query syntax and operators
+  </Card>
+  
+  <Card title="Hybrid Search" icon="magnifying-glass" href="/search/concepts/hybrid-search">
+    Combine text and vector search for best results
+  </Card>
+</CardGroup>

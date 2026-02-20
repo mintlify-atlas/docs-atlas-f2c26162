@@ -1,0 +1,443 @@
+---
+title: Custom Vision Overview
+description: Build and train custom image recognition models for image classification and object detection
+---
+
+# Custom Vision
+
+Azure AI Custom Vision is an image recognition service that lets you build, deploy, and improve custom image classification and object detection models. Train models with your own labeled images to detect specific objects or classify images according to your custom categories.
+
+<Note>
+  Custom Vision is retiring. Existing applications can continue to use the service, but new projects should consider Computer Vision or other alternatives.
+</Note>
+
+## What is Custom Vision?
+
+Custom Vision uses machine learning to analyze images for features you specify. You provide labeled training images, and the service trains a model customized to your specific use case. Once trained, you can use the model to classify new images or detect objects.
+
+<CardGroup cols={2}>
+  <Card title="Image Classification" icon="image">
+    Apply one or more labels to entire images based on visual characteristics
+  </Card>
+  
+  <Card title="Object Detection" icon="crosshairs">
+    Detect and locate specific objects within images with bounding boxes
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Image Classification
+
+Apply custom labels to images:
+
+- **Multi-class Classification**: Each image gets one label
+- **Multi-label Classification**: Images can have multiple labels
+- Train with your own categories
+- Minimum 5 images per label recommended
+- 50+ images per label for best results
+
+**Example Use Cases:**
+- Categorize products by type
+- Classify defects in manufacturing
+- Identify plant species
+- Categorize documents by type
+
+```python
+from azure.cognitiveservices.vision.customvision.training import CustomVisionTrainingClient
+from msrest.authentication import ApiKeyCredentials
+
+# Create training client
+credentials = ApiKeyCredentials(in_headers={"Training-key": training_key})
+trainer = CustomVisionTrainingClient(endpoint, credentials)
+
+# Create project
+project = trainer.create_project("Product Classifier")
+
+# Add tags
+tag_electronics = trainer.create_tag(project.id, "Electronics")
+tag_clothing = trainer.create_tag(project.id, "Clothing")
+
+# Upload and tag images
+with open("electronics1.jpg", "rb") as image:
+    trainer.create_images_from_data(
+        project.id, 
+        image.read(), 
+        tag_ids=[tag_electronics.id]
+    )
+
+# Train model
+iteration = trainer.train_project(project.id)
+```
+
+### Object Detection
+
+Detect and locate objects in images:
+
+- Draw bounding boxes around objects
+- Label multiple objects per image
+- Return coordinates for each detection
+- Confidence scores for each object
+- Minimum 15 images per object recommended
+
+**Example Use Cases:**
+- Detect defects on products
+- Count items on shelves
+- Identify parts in images
+- Locate logos in photos
+
+```python
+from azure.cognitiveservices.vision.customvision.training.models import Region
+
+# Create object detection project
+obj_detection_domain = next(
+    domain for domain in trainer.get_domains() 
+    if domain.type == "ObjectDetection" and domain.name == "General"
+)
+project = trainer.create_project(
+    "Product Detector", 
+    domain_id=obj_detection_domain.id
+)
+
+# Add tag
+tag_product = trainer.create_tag(project.id, "Product")
+
+# Upload image with bounding box
+with open("product.jpg", "rb") as image:
+    regions = [
+        Region(
+            tag_id=tag_product.id,
+            left=0.1,
+            top=0.2,
+            width=0.5,
+            height=0.6
+        )
+    ]
+    trainer.create_images_from_data(
+        project.id,
+        image.read(),
+        regions=regions
+    )
+```
+
+## How It Works
+
+<Steps>
+  <Step title="Create Project">
+    Set up a new Custom Vision project for classification or object detection
+  </Step>
+  
+  <Step title="Upload Images">
+    Upload training images with labels or bounding boxes
+  </Step>
+  
+  <Step title="Train Model">
+    Train the model on your labeled data
+  </Step>
+  
+  <Step title="Evaluate Performance">
+    Review precision and recall metrics
+  </Step>
+  
+  <Step title="Publish Model">
+    Publish the trained iteration to a prediction endpoint
+  </Step>
+  
+  <Step title="Make Predictions">
+    Use the prediction API to classify or detect objects in new images
+  </Step>
+</Steps>
+
+## Domain Optimization
+
+Custom Vision offers specialized domains optimized for specific scenarios:
+
+### Classification Domains
+
+- **General**: All-purpose classification
+- **General (compact)**: Optimized for mobile and edge devices
+- **Food**: Food and dishes
+- **Landmarks**: Famous landmarks and buildings
+- **Retail**: Retail products and items
+- **Adult**: Adult content detection
+
+### Object Detection Domains
+
+- **General**: All-purpose object detection
+- **General (compact)**: Optimized for mobile and edge
+- **Logo**: Brand and logo detection
+- **Products on Shelves**: Retail shelf products
+
+```python
+# List available domains
+domains = trainer.get_domains()
+for domain in domains:
+    print(f"{domain.name} ({domain.type})")
+
+# Create project with specific domain
+food_domain = next(d for d in domains if d.name == "Food")
+project = trainer.create_project(
+    "Food Classifier",
+    domain_id=food_domain.id
+)
+```
+
+## Making Predictions
+
+Use the prediction API to classify images or detect objects:
+
+### Classification Prediction
+
+```python
+from azure.cognitiveservices.vision.customvision.prediction import CustomVisionPredictionClient
+
+# Create prediction client
+prediction_credentials = ApiKeyCredentials(
+    in_headers={"Prediction-key": prediction_key}
+)
+predictor = CustomVisionPredictionClient(endpoint, prediction_credentials)
+
+# Predict from URL
+results = predictor.classify_image_url(
+    project_id,
+    published_name,
+    url="https://example.com/image.jpg"
+)
+
+# Display predictions
+for prediction in results.predictions:
+    print(f"{prediction.tag_name}: {prediction.probability * 100:.2f}%")
+
+# Predict from local file
+with open("test_image.jpg", "rb") as image:
+    results = predictor.classify_image(
+        project_id,
+        published_name,
+        image.read()
+    )
+```
+
+### Object Detection Prediction
+
+```python
+# Detect objects in image
+results = predictor.detect_image_url(
+    project_id,
+    published_name,
+    url="https://example.com/image.jpg"
+)
+
+# Display detections
+for prediction in results.predictions:
+    if prediction.probability > 0.5:
+        bbox = prediction.bounding_box
+        print(f"Found {prediction.tag_name} at:")
+        print(f"  Left: {bbox.left}, Top: {bbox.top}")
+        print(f"  Width: {bbox.width}, Height: {bbox.height}")
+        print(f"  Confidence: {prediction.probability * 100:.2f}%")
+```
+
+## Export Models
+
+Export trained models for offline use:
+
+- **CoreML**: iOS applications
+- **TensorFlow**: Android and custom deployments
+- **ONNX**: Cross-platform inference
+- **TensorFlow Lite**: Mobile devices
+- **Dockerfile**: Container deployments
+
+```python
+# Export model
+export = trainer.export_iteration(
+    project_id,
+    iteration.id,
+    platform="TensorFlow",
+    flavor="TensorFlowNormal"
+)
+
+# Download exported model
+if export.status == "Done":
+    print(f"Download URL: {export.download_uri}")
+```
+
+## Custom Vision Portal
+
+The [Custom Vision portal](https://customvision.ai) provides a web interface for:
+
+- Creating and managing projects
+- Uploading and labeling images
+- Training models
+- Testing predictions
+- Viewing performance metrics
+- Exporting models
+- Managing API keys
+
+**No code required** - Build complete models through the UI
+
+## Training Data Requirements
+
+### Image Classification
+
+- **Minimum**: 5 images per tag
+- **Recommended**: 50+ images per tag
+- **Variety**: Include different angles, lighting, backgrounds
+- **Balance**: Similar number of images per tag
+- **Quality**: Clear, well-lit images
+
+### Object Detection
+
+- **Minimum**: 15 images per object
+- **Recommended**: 50+ images per object
+- **Bounding boxes**: Tight boxes around objects
+- **Variety**: Different positions, sizes, orientations
+- **Occlusion**: Include partially hidden objects
+
+## Performance Metrics
+
+Evaluate model performance:
+
+- **Precision**: Percentage of correct predictions
+- **Recall**: Percentage of objects found
+- **mAP**: Mean average precision (object detection)
+- **Threshold**: Adjustable confidence threshold
+
+```python
+# Get iteration performance
+iteration = trainer.get_iteration(project_id, iteration_id)
+print(f"Precision: {iteration.precision * 100:.2f}%")
+print(f"Recall: {iteration.recall * 100:.2f}%")
+```
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Manufacturing">
+    - Quality control and defect detection
+    - Product classification on assembly lines
+    - Part identification and sorting
+    - Visual inspection automation
+  </Accordion>
+  
+  <Accordion title="Retail">
+    - Product recognition and categorization
+    - Shelf monitoring and planogram compliance
+    - Visual search for similar products
+    - Inventory management
+  </Accordion>
+  
+  <Accordion title="Healthcare">
+    - Medical image classification
+    - Skin condition identification
+    - X-ray and scan analysis
+    - Equipment and instrument detection
+  </Accordion>
+  
+  <Accordion title="Agriculture">
+    - Plant disease detection
+    - Crop type identification
+    - Pest detection
+    - Yield estimation
+  </Accordion>
+</AccordionGroup>
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-cognitiveservices-vision-customvision
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Microsoft.Azure.CognitiveServices.Vision.CustomVision.Training
+    dotnet add package Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    Maven packages for training and prediction
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure/cognitiveservices-customvision-training
+    npm install @azure/cognitiveservices-customvision-prediction
+    ```
+  </Card>
+</CardGroup>
+
+## Input Requirements
+
+- **Formats**: JPEG, PNG, BMP, GIF
+- **File Size**: Less than 6 MB (training), 4 MB (prediction)
+- **Dimensions**: Minimum 256 pixels on shortest side
+- **Maximum images**: 100,000 per project
+- **Maximum tags**: 500 per project
+
+## Pricing
+
+- **Free Tier (F0)**:
+  - 2 projects
+  - 5,000 training images per project
+  - 10,000 predictions per month
+  
+- **Standard Tier (S0)**:
+  - Unlimited projects
+  - 100,000 training images per project
+  - Pay per transaction
+
+## Getting Started
+
+<Steps>
+  <Step title="Access Portal">
+    Go to [customvision.ai](https://customvision.ai) and sign in
+  </Step>
+  
+  <Step title="Create Project">
+    Choose classification or object detection
+  </Step>
+  
+  <Step title="Upload Images">
+    Add training images with labels or bounding boxes
+  </Step>
+  
+  <Step title="Train Model">
+    Click "Train" to build your custom model
+  </Step>
+  
+  <Step title="Test">
+    Test the model with new images using Quick Test
+  </Step>
+  
+  <Step title="Publish">
+    Publish the iteration to make it available via API
+  </Step>
+</Steps>
+
+## Best Practices
+
+- Use 50+ images per tag for better accuracy
+- Include variety in training data (angles, lighting, backgrounds)
+- Balance training data across tags
+- Use appropriate domain for your scenario
+- Test with images not in training set
+- Retrain with incorrectly classified images
+- Adjust confidence threshold based on use case
+
+## Migration Guidance
+
+With Custom Vision retiring, consider these alternatives:
+
+- **Computer Vision**: For general image analysis and pre-built models
+- **Azure Machine Learning**: For advanced custom model training
+- **Custom models**: Export your model before retirement
+
+## Next Steps
+
+- [Try Custom Vision Portal](https://customvision.ai)
+- [View Quickstart Guide](https://learn.microsoft.com/azure/ai-services/custom-vision-service/quickstarts/image-classification)
+- [Explore Code Samples](https://github.com/Azure-Samples/cognitive-services-python-sdk-samples)
+- [Learn about Computer Vision](/ai-services/computer-vision/overview)

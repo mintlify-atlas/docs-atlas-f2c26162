@@ -1,0 +1,718 @@
+---
+title: Azure AI Search Overview
+description: AI-powered information retrieval platform for building rich search experiences and generative AI applications with RAG.
+---
+
+# Azure AI Search
+
+Azure AI Search is a fully managed, cloud-hosted service that connects your data to AI. The service unifies access to enterprise and web content so agents and LLMs can use context, chat history, and multi-source signals to produce reliable, grounded answers.
+
+<CardGroup cols={2}>
+  <Card title="Classic Search" icon="magnifying-glass">
+    Traditional search with full-text, vector, and hybrid queries
+  </Card>
+  
+  <Card title="Agentic Retrieval" icon="robot">
+    LLM-assisted multi-query retrieval for agent workflows
+  </Card>
+  
+  <Card title="AI Enrichment" icon="sparkles">
+    Extract and structure content with AI processing
+  </Card>
+  
+  <Card title="Enterprise Ready" icon="shield-check">
+    Security, compliance, and scale for production workloads
+  </Card>
+</CardGroup>
+
+## What is Azure AI Search?
+
+Common use cases include **classic search** for traditional search applications and **agentic retrieval** for modern retrieval-augmented generation (RAG) scenarios. This makes Azure AI Search suitable for both enterprise and consumer scenarios.
+
+### Key Capabilities
+
+When you create a search service, you unlock:
+
+<Tabs>
+  <Tab title="Search Engines">
+    - **Classic search** for single requests
+    - **Agentic retrieval** for parallel, iterative, LLM-assisted search
+    - Full-text search with BM25 ranking
+    - Vector search with similarity matching
+    - Hybrid search combining text and vectors
+    - Multimodal queries over text and images
+  </Tab>
+  
+  <Tab title="Content Processing">
+    - AI enrichment to chunk and vectorize
+    - Document cracking for various formats
+    - Image analysis and OCR
+    - Entity recognition and key phrase extraction
+    - Translation and language detection
+    - Custom skills for specialized processing
+  </Tab>
+  
+  <Tab title="Enterprise Features">
+    - Azure scale, security, and monitoring
+    - Document-level access control
+    - Private endpoints and network isolation
+    - Compliance certifications
+    - SLA-backed availability
+    - Integration with Microsoft Entra ID
+  </Tab>
+</Tabs>
+
+## Why Use Azure AI Search?
+
+<CardGroup cols={2}>
+  <Card title="Ground AI Responses" icon="anchor">
+    Provide agents and chatbots with accurate, context-aware responses grounded in your data.
+  </Card>
+  
+  <Card title="Multi-Source Access" icon="database">
+    Connect to Azure Blob Storage, Cosmos DB, SharePoint, OneLake, and more.
+  </Card>
+  
+  <Card title="Intelligent Processing" icon="brain">
+    Enrich content with AI skills for chunking, embedding, and transformation.
+  </Card>
+  
+  <Card title="Hybrid Search" icon="merge">
+    Combine full-text and vector search to balance precision and recall.
+  </Card>
+  
+  <Card title="Multimodal Search" icon="images">
+    Query content containing both text and images in a single pipeline.
+  </Card>
+  
+  <Card title="Enterprise Security" icon="lock">
+    Implement document-level access control, private networks, and compliance.
+  </Card>
+</CardGroup>
+
+## Classic Search
+
+Classic search is an index-first retrieval model for predictable, low-latency queries.
+
+### How It Works
+
+<Steps>
+  <Step title="Create an Index">
+    Define the schema with fields, data types, and attributes.
+    
+    ```json
+    {
+      "name": "products-index",
+      "fields": [
+        {"name": "id", "type": "Edm.String", "key": true},
+        {"name": "title", "type": "Edm.String", "searchable": true},
+        {"name": "description", "type": "Edm.String", "searchable": true},
+        {"name": "category", "type": "Edm.String", "filterable": true},
+        {"name": "price", "type": "Edm.Double", "filterable": true},
+        {"name": "vector", "type": "Collection(Edm.Single)", "dimensions": 1536}
+      ]
+    }
+    ```
+  </Step>
+  
+  <Step title="Load Content">
+    Use push or pull methods to populate the index.
+    
+    **Push Method** (direct upload):
+    ```python
+    from azure.search.documents import SearchClient
+    
+    search_client = SearchClient(endpoint, index_name, credential)
+    
+    documents = [
+        {
+            "id": "1",
+            "title": "Azure AI Search",
+            "description": "Powerful search service",
+            "category": "AI Services",
+            "price": 0.0
+        }
+    ]
+    
+    result = search_client.upload_documents(documents)
+    ```
+    
+    **Pull Method** (indexer):
+    ```python
+    from azure.search.documents.indexes import SearchIndexerClient
+    from azure.search.documents.indexes.models import (
+        SearchIndexer,
+        SearchIndexerDataSourceConnection
+    )
+    
+    # Create data source
+    data_source = SearchIndexerDataSourceConnection(
+        name="myblob-datasource",
+        type="azureblob",
+        connection_string="DefaultEndpointsProtocol=https;...",
+        container=SearchIndexerDataContainer(name="documents")
+    )
+    
+    # Create indexer
+    indexer = SearchIndexer(
+        name="myblob-indexer",
+        data_source_name="myblob-datasource",
+        target_index_name="products-index"
+    )
+    
+    indexer_client.create_or_update_indexer(indexer)
+    ```
+  </Step>
+  
+  <Step title="Query the Index">
+    Execute searches with various query types.
+    
+    ```python
+    # Full-text search
+    results = search_client.search(
+        search_text="machine learning",
+        select=["title", "description"],
+        top=10
+    )
+    
+    # Vector search
+    results = search_client.search(
+        vector_queries=[VectorizedQuery(
+            vector=query_embedding,
+            k_nearest_neighbors=5,
+            fields="vector"
+        )]
+    )
+    
+    # Hybrid search
+    results = search_client.search(
+        search_text="AI services",
+        vector_queries=[VectorizedQuery(
+            vector=query_embedding,
+            k_nearest_neighbors=5,
+            fields="vector"
+        )],
+        top=10
+    )
+    ```
+  </Step>
+</Steps>
+
+### Query Types
+
+<Accordion title="Full-Text Search">
+  Traditional keyword-based search with BM25 ranking.
+  
+  **Features:**
+  - Tokenization and lexical analysis
+  - Fuzzy matching and wildcards
+  - Phrase queries and proximity search
+  - Boolean operators (AND, OR, NOT)
+  - Field-weighted scoring
+  
+  ```python
+  results = search_client.search(
+      search_text='neural networks',
+      query_type='full',
+      search_fields=['title', 'content'],
+      select=['title', 'content', 'author'],
+      top=10
+  )
+  ```
+</Accordion>
+
+<Accordion title="Vector Search">
+  Similarity-based search using embedding vectors.
+  
+  **Features:**
+  - Semantic similarity matching
+  - Support for multiple vector fields
+  - Exhaustive or approximate (HNSW) algorithms
+  - Configurable distance metrics (cosine, dot product, Euclidean)
+  
+  ```python
+  from azure.search.documents.models import VectorizedQuery
+  
+  # Generate query embedding
+  query_vector = openai_client.embeddings.create(
+      input="deep learning tutorials",
+      model="text-embedding-ada-002"
+  ).data[0].embedding
+  
+  # Vector search
+  results = search_client.search(
+      vector_queries=[VectorizedQuery(
+          vector=query_vector,
+          k_nearest_neighbors=10,
+          fields="content_vector"
+      )]
+  )
+  ```
+</Accordion>
+
+<Accordion title="Hybrid Search">
+  Combine text and vector search for best results.
+  
+  **Features:**
+  - Reciprocal Rank Fusion (RRF) for result merging
+  - Balanced precision and recall
+  - Configurable weight between text and vector
+  - Optimal for RAG applications
+  
+  ```python
+  results = search_client.search(
+      search_text="artificial intelligence",
+      vector_queries=[VectorizedQuery(
+          vector=query_vector,
+          k_nearest_neighbors=50,
+          fields="content_vector"
+      )],
+      top=10
+  )
+  ```
+</Accordion>
+
+<Accordion title="Semantic Search">
+  Microsoft's semantic ranker for improved relevance.
+  
+  **Features:**
+  - Deep learning re-ranking
+  - Semantic captions and highlights
+  - Query understanding
+  - Multilingual support
+  
+  ```python
+  results = search_client.search(
+      search_text="how to train neural networks",
+      query_type='semantic',
+      semantic_configuration_name='my-semantic-config',
+      query_caption='extractive',
+      top=10
+  )
+  
+  for result in results:
+      print(f"Title: {result['title']}")
+      print(f"Caption: {result['@search.captions'][0].text}")
+      print(f"Score: {result['@search.reranker_score']}")
+  ```
+</Accordion>
+
+## Agentic Retrieval
+
+Agentic retrieval is a multi-query pipeline designed for complex agent-to-agent workflows.
+
+### Knowledge Bases
+
+A knowledge base represents a complete domain of knowledge:
+
+```python
+from azure.search.documents.indexes.models import (
+    SearchIndex,
+    KnowledgeBase,
+    KnowledgeSource
+)
+
+# Create knowledge base
+kb = KnowledgeBase(
+    name="company-knowledge",
+    description="Corporate documentation and policies",
+    knowledge_sources=[
+        KnowledgeSource(
+            name="sharepoint-docs",
+            type="sharepoint",
+            connection_string="...",
+            site_url="https://company.sharepoint.com"
+        ),
+        KnowledgeSource(
+            name="azure-storage",
+            type="azureblob",
+            connection_string="...",
+            container_name="documents"
+        )
+    ],
+    reasoning_effort="medium",  # low, medium, high
+    include_citations=True
+)
+
+kb_client.create_or_update(kb)
+```
+
+### Query Flow
+
+<Steps>
+  <Step title="Planning">
+    LLM analyzes the query and creates a retrieval plan.
+  </Step>
+  
+  <Step title="Decomposition">
+    Break complex queries into focused subqueries.
+  </Step>
+  
+  <Step title="Parallel Retrieval">
+    Execute subqueries across multiple knowledge sources simultaneously.
+  </Step>
+  
+  <Step title="Semantic Reranking">
+    Apply semantic understanding to improve result quality.
+  </Step>
+  
+  <Step title="Results Merging">
+    Combine and deduplicate results from all sources.
+  </Step>
+  
+  <Step title="Response Generation">
+    Return answer, sources, and activity log optimized for agents.
+  </Step>
+</Steps>
+
+### Agent Integration
+
+```python
+from azure.ai.projects import AIProjectClient
+
+# Query knowledge base through agent
+agent = project_client.agents.create(
+    model="gpt-4",
+    instructions="Answer questions using company knowledge.",
+    tools=[{
+        "type": "knowledge_base",
+        "knowledge_base_id": kb.id
+    }]
+)
+
+thread = project_client.agents.create_thread()
+message = project_client.agents.create_message(
+    thread.id,
+    "user",
+    "What is our return policy?"
+)
+
+run = project_client.agents.create_run(thread.id, agent.id)
+response = project_client.agents.wait_for_run(thread.id, run.id)
+
+# Response includes:
+# - Grounded answer
+# - Source citations
+# - Activity log
+# - Confidence scores
+```
+
+## AI Enrichment
+
+AI enrichment uses skills to extract and transform content during indexing:
+
+### Built-in Skills
+
+<CardGroup cols={2}>
+  <Card title="Text Skills" icon="file-lines">
+    - Text splitting (chunking)
+    - Language detection
+    - Key phrase extraction
+    - Entity recognition
+    - Sentiment analysis
+    - PII detection
+  </Card>
+  
+  <Card title="Vision Skills" icon="eye">
+    - OCR (text extraction)
+    - Image analysis
+    - Object detection
+    - Brand detection
+    - Face detection
+    - Handwriting recognition
+  </Card>
+  
+  <Card title="AI Skills" icon="brain">
+    - Azure OpenAI embeddings
+    - Multimodal embeddings
+    - Text translation
+    - Custom models
+  </Card>
+  
+  <Card title="Utility Skills" icon="wrench">
+    - Conditional logic
+    - Document extraction
+    - Shaper (structure data)
+    - Merge fields
+  </Card>
+</CardGroup>
+
+### Skillset Example
+
+```python
+from azure.search.documents.indexes.models import (
+    SearchIndexerSkillset,
+    SplitSkill,
+    AzureOpenAIEmbeddingSkill,
+    EntityRecognitionSkill
+)
+
+skillset = SearchIndexerSkillset(
+    name="document-enrichment",
+    description="Extract and vectorize content",
+    skills=[
+        # Split text into chunks
+        SplitSkill(
+            context="/document",
+            text_split_mode="pages",
+            maximum_page_length=2000,
+            page_overlap_length=500,
+            inputs=[{"name": "text", "source": "/document/content"}],
+            outputs=[{"name": "textItems", "target_name": "chunks"}]
+        ),
+        # Generate embeddings
+        AzureOpenAIEmbeddingSkill(
+            context="/document/chunks/*",
+            resource_uri="https://your-openai.openai.azure.com",
+            deployment_id="text-embedding-ada-002",
+            inputs=[{"name": "text", "source": "/document/chunks/*"}],
+            outputs=[{"name": "embedding", "target_name": "vector"}]
+        ),
+        # Extract entities
+        EntityRecognitionSkill(
+            context="/document",
+            categories=["Person", "Organization", "Location"],
+            inputs=[{"name": "text", "source": "/document/content"}],
+            outputs=[{"name": "entities", "target_name": "entities"}]
+        )
+    ]
+)
+
+indexer_client.create_or_update_skillset(skillset)
+```
+
+### Integrated Vectorization
+
+Automate embedding generation during indexing:
+
+```python
+# Configure vectorizer
+from azure.search.documents.indexes.models import (
+    AzureOpenAIVectorizer,
+    VectorSearch,
+    VectorSearchProfile
+)
+
+vectorizer = AzureOpenAIVectorizer(
+    name="my-vectorizer",
+    azure_open_ai_parameters={
+        "resource_uri": "https://your-openai.openai.azure.com",
+        "deployment_id": "text-embedding-ada-002",
+        "api_key": "your-key"
+    }
+)
+
+# Add to index
+index = SearchIndex(
+    name="auto-vectorized-index",
+    fields=[
+        SimpleField(name="id", type="Edm.String", key=True),
+        SearchableField(name="content", type="Edm.String"),
+        SearchField(
+            name="content_vector",
+            type="Collection(Edm.Single)",
+            vector_search_dimensions=1536,
+            vector_search_profile_name="my-profile"
+        )
+    ],
+    vector_search=VectorSearch(
+        profiles=[VectorSearchProfile(
+            name="my-profile",
+            vectorizer_name="my-vectorizer"
+        )],
+        vectorizers=[vectorizer]
+    )
+)
+```
+
+## Security Features
+
+### Document-Level Security
+
+Implement fine-grained access control:
+
+```python
+# Index documents with security fields
+documents = [
+    {
+        "id": "doc1",
+        "content": "Confidential information",
+        "security_filter": ["group1", "user123"]
+    }
+]
+
+search_client.upload_documents(documents)
+
+# Query with security filter
+user_groups = ["group1", "group2"]
+filter_expression = " or ".join(
+    [f"security_filter/any(g: g eq '{group}')" for group in user_groups]
+)
+
+results = search_client.search(
+    search_text="confidential",
+    filter=filter_expression
+)
+```
+
+### Network Security
+
+<Tabs>
+  <Tab title="Private Endpoints">
+    Connect to search service over private network:
+    
+    - Azure Private Link integration
+    - No public internet exposure
+    - Network traffic stays on Azure backbone
+    - Compatible with VNet peering
+  </Tab>
+  
+  <Tab title="Firewall Rules">
+    Restrict access by IP address:
+    
+    ```python
+    from azure.mgmt.search import SearchManagementClient
+    
+    # Configure IP rules
+    search_service = search_mgmt_client.services.update(
+        resource_group_name="my-rg",
+        search_service_name="my-search",
+        service={
+            "network_rule_set": {
+                "ip_rules": [
+                    {"value": "40.76.54.131"},
+                    {"value": "18.43.32.0/24"}
+                ]
+            }
+        }
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Managed Identity">
+    Authenticate without keys:
+    
+    ```python
+    from azure.identity import DefaultAzureCredential
+    from azure.search.documents import SearchClient
+    
+    credential = DefaultAzureCredential()
+    search_client = SearchClient(
+        endpoint="https://my-search.search.windows.net",
+        index_name="my-index",
+        credential=credential
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Monitoring and Optimization
+
+### Search Analytics
+
+Track usage patterns and optimize:
+
+```python
+from azure.monitor.query import LogsQueryClient
+
+logs_client = LogsQueryClient(credential)
+
+# Query search logs
+query = """
+AzureDiagnostics
+| where ResourceType == "SEARCHSERVICES"
+| where OperationName == "Query.Search"
+| summarize 
+    QueryCount = count(),
+    AvgDuration = avg(DurationMs),
+    AvgResultCount = avg(ResultCount)
+  by SearchText = Query_s
+| order by QueryCount desc
+| take 20
+"""
+
+response = logs_client.query_workspace(
+    workspace_id="your-workspace-id",
+    query=query,
+    timespan=timedelta(days=7)
+)
+```
+
+### Performance Tuning
+
+<Accordion title="Relevance Tuning">
+  Improve search result quality:
+  
+  - **Scoring Profiles**: Boost fields or apply functions
+  - **Synonym Maps**: Handle terminology variations
+  - **Custom Analyzers**: Language-specific tokenization
+  - **Semantic Ranking**: Deep learning re-ranking
+</Accordion>
+
+<Accordion title="Scale Configuration">
+  Optimize for throughput and storage:
+  
+  - **Replicas**: Handle more queries per second
+  - **Partitions**: Store more documents
+  - **Auto-scaling**: Adjust capacity based on load
+  - **Index Optimization**: Reduce field count and analyzers
+</Accordion>
+
+## Pricing Tiers
+
+| Tier | Storage | Replicas | Partitions | Use Case |
+|------|---------|----------|------------|----------|
+| **Free** | 50 MB | 1 | 1 | Development and testing |
+| **Basic** | 2 GB | 3 | 1 | Small production workloads |
+| **Standard S1** | 25 GB | 12 | 12 | Most production scenarios |
+| **Standard S2** | 100 GB | 12 | 12 | Larger datasets |
+| **Standard S3** | 200 GB | 12 | 12 | High-volume queries |
+| **Storage Optimized** | 1-2 TB | 12 | 12 | Large document collections |
+
+<Note>
+  Pricing is based on search units (replicas × partitions). Free tier includes 10,000 documents and 50 MB storage.
+</Note>
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Search Service">
+    Provision a search service in the Azure portal or via CLI.
+  </Step>
+  
+  <Step title="Define Index Schema">
+    Create an index with fields matching your data structure.
+  </Step>
+  
+  <Step title="Load Data">
+    Use indexers or push API to populate the index.
+  </Step>
+  
+  <Step title="Query and Test">
+    Use Search Explorer or SDK to test queries.
+  </Step>
+  
+  <Step title="Integrate">
+    Add search to your application or agent.
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Create your first search index
+  </Card>
+  
+  <Card title="RAG Tutorial" icon="book">
+    Build a RAG application
+  </Card>
+  
+  <Card title="REST API Reference" icon="code">
+    Complete API documentation
+  </Card>
+  
+  <Card title="Vector Search Guide" icon="diagram-project">
+    Implement vector search
+  </Card>
+</CardGroup>

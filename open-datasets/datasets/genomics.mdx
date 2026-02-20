@@ -1,0 +1,420 @@
+---
+title: Genomics Datasets
+description: Access large-scale genomics datasets including 1000 Genomes, gnomAD, and ClinVar for genetic variation research.
+---
+
+# Genomics Datasets
+
+Azure Open Datasets hosts several large-scale genomics datasets for research in human genetic variation, population genomics, and clinical genetics.
+
+## Available Datasets
+
+<CardGroup cols={2}>
+  <Card title="1000 Genomes" icon="users">
+    Public catalog of human variation and genotype data with 2,504 individuals from 26 populations
+  </Card>
+  <Card title="gnomAD" icon="dna">
+    Genome Aggregation Database harmonizing exome and genome sequencing data
+  </Card>
+  <Card title="ClinVar" icon="file-medical">
+    Public archive of relationships between human variations and phenotypes
+  </Card>
+  <Card title="ENCODE" icon="microscope">
+    Encyclopedia of DNA elements and functional genomics data
+  </Card>
+</CardGroup>
+
+---
+
+## 1000 Genomes Project
+
+The 1000 Genomes Project ran between 2008 and 2015 to create the largest public catalog of human variation and genotype data.
+
+### Overview
+
+- **Individuals**: 2,504 from 26 populations
+- **Variants Identified**: 84 million
+- **Data Volume**: Approximately 815 TB
+- **Update Frequency**: Daily
+- **Format**: VCF, Parquet
+
+### Storage Location
+
+This dataset is stored in the **West US 2** and **West Central US** Azure regions. We recommend locating compute resources in these regions for affinity.
+
+### Data Access URLs
+
+- **West US 2**: `https://dataset1000genomes.blob.core.windows.net/dataset`
+- **West Central US**: `https://dataset1000genomes-secondary.blob.core.windows.net/dataset`
+
+### Key Publications
+
+1. **Pilot Analysis**: [A map of human genome variation from population-scale sequencing](https://www.nature.com/articles/nature09534) - Nature 467, 1061-1073 (2010)
+
+2. **Phase 1 Analysis**: [An integrated map of genetic variation from 1,092 human genomes](https://www.nature.com/articles/nature11632) - Nature 491, 56-65 (2012)
+
+3. **Phase 3 Analysis**: [A global reference for human genetic variation](https://www.nature.com/articles/nature15394) - Nature 526, 68-74 (2015)
+
+### Parquet Format Access
+
+The dataset is now available in optimized Parquet format for faster analysis:
+
+```python
+import pandas as pd
+import pyarrow.parquet as pq
+
+# Read parquet files directly
+df = pd.read_parquet(
+    "https://dataset1000genomes.blob.core.windows.net/dataset/parquet/..."
+)
+```
+
+For more details on the Parquet conversion, see the [genomicsnotebook repository](https://github.com/microsoft/genomicsnotebook/tree/main/vcf2parquet-conversion/1000genomes).
+
+### Use Terms
+
+Following the final publications, data from the 1000 Genomes Project is publicly available without embargo. Use of the data should be cited per details in the [1000 Genomes FAQ](https://www.internationalgenome.org/faq).
+
+---
+
+## Genome Aggregation Database (gnomAD)
+
+The [Genome Aggregation Database (gnomAD)](https://gnomad.broadinstitute.org/) aggregates and harmonizes exome and genome sequencing data from large-scale sequencing projects.
+
+### Overview
+
+- **Data Volume**: Approximately 30 TB
+- **Update Frequency**: With each gnomAD release
+- **Hosted By**: Broad Institute collaboration
+- **Storage Region**: East US
+
+### Data Access
+
+**Storage Account**: `https://datasetgnomad.blob.core.windows.net/dataset/`
+
+The data is available publicly without restrictions. Use the AzCopy tool for bulk operations:
+
+#### View VCFs in Release 3.0
+
+```bash
+azcopy ls https://datasetgnomad.blob.core.windows.net/dataset/release/3.0/vcf/genomes
+```
+
+#### Download All VCFs Recursively
+
+```bash
+azcopy cp --recursive=true https://datasetgnomad.blob.core.windows.net/dataset/release/3.0/vcf/genomes .
+```
+
+### Parquet Format (NEW)
+
+Parquet format of gnomAD v2.1.1 VCF files (exomes and genomes) is now available:
+
+#### View Parquet Files
+
+```bash
+azcopy ls https://datasetgnomadparquet.blob.core.windows.net/dataset
+```
+
+#### Download Parquet Files
+
+```bash
+azcopy cp --recursive=true https://datasetgnomadparquet.blob.core.windows.net/dataset .
+```
+
+### Access with Azure Storage Explorer
+
+You can also use [Azure Storage Explorer](https://azure.microsoft.com/features/storage-explorer/) to browse the list of files in the gnomAD release.
+
+### Use Terms
+
+Data is available without restrictions. For more information and citation details, visit the [gnomAD about page](https://gnomad.broadinstitute.org/about).
+
+### Contact
+
+For questions or feedback, contact the [gnomAD team](https://gnomad.broadinstitute.org/contact).
+
+---
+
+## ClinVar Annotations
+
+[ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) is a freely accessible public archive of reports about relationships between human variations and phenotypes.
+
+### Overview
+
+- **Source**: National Library of Medicine
+- **Update Frequency**: Daily
+- **Storage Regions**: West US 2, West Central US
+- **Content**: Clinical interpretations of genetic variants
+
+### Data Access URLs
+
+- **West US 2**: `https://datasetclinvar.blob.core.windows.net/dataset`
+- **West Central US**: `https://datasetclinvar-secondary.blob.core.windows.net/dataset`
+
+### Key Features
+
+- Reports with supporting evidence about human variations and phenotypes
+- Relationships between human variation and observed health status
+- History of interpretations
+- Broader set of clinical interpretations for genomics workflows
+
+### Data Source
+
+This dataset is a mirror of the National Library of Medicine ClinVar FTP resource:
+- [XML FTP](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/)
+- [General FTP](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/)
+- [FTP Overview](https://www.ncbi.nlm.nih.gov/clinvar/docs/ftp_primer/)
+
+### Documentation
+
+- [Data Dictionary](https://www.ncbi.nlm.nih.gov/projects/clinvar/ClinVarDataDictionary.pdf)
+- [FAQ](https://www.ncbi.nlm.nih.gov/clinvar/docs/faq/)
+
+### Python Access Example
+
+```python
+from azureml.core import Dataset
+import os
+import pandas as pd
+
+# Access ClinVar dataset
+reference_dataset = Dataset.File.from_files(
+    'https://datasetclinvar.blob.core.windows.net/dataset'
+)
+mount = reference_dataset.mount()
+
+REF_DIR = '/dataset'
+path = mount.mount_point + REF_DIR
+
+with mount:
+    print(os.listdir(path))
+```
+
+### Download Specific Files
+
+```python
+from azure.storage.blob import BlockBlobService
+
+blob_service_client = BlockBlobService(
+    account_name='datasetclinvar',
+    sas_token='sv=2019-02-02&se=2050-01-01T08%3A00%3A00Z&si=prod&sr=c&sig=qFPPwPba1RmBvaffkzkLuzabYU5dZstSTgMwxuLNME8%3D'
+)
+
+blob_service_client.get_blob_to_path(
+    'dataset',
+    'ClinVarFullRelease_00-latest.xml.gz.md5',
+    './ClinVarFullRelease_00-latest.xml.gz.md5'
+)
+```
+
+### Use Terms
+
+Data is available without restrictions. For more information, see [Accessing and using data in ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/docs/maintenance_use/).
+
+### Contact
+
+For questions or feedback, email [clinvar@ncbi.nlm.nih.gov](mailto:clinvar@ncbi.nlm.nih.gov).
+
+---
+
+## Common Analysis Patterns
+
+### Query Variant Data
+
+```python
+import pandas as pd
+import pyarrow.parquet as pq
+
+# Read variant data from parquet
+df = pd.read_parquet("path/to/variants.parquet")
+
+# Filter by chromosome
+chr1_variants = df[df['CHROM'] == '1']
+
+# Filter by allele frequency
+common_variants = df[df['AF'] > 0.01]
+
+# Filter by quality score
+high_quality = df[df['QUAL'] > 30]
+```
+
+### Compare Populations
+
+```python
+# Compare allele frequencies across populations
+population_comparison = df.groupby('POP').agg({
+    'AF': 'mean',
+    'AC': 'sum',
+    'AN': 'sum'
+})
+
+print("Population Statistics:")
+print(population_comparison)
+```
+
+### Variant Effect Analysis
+
+```python
+# Analyze variant consequences
+consequence_counts = df['Consequence'].value_counts()
+
+print("\nTop 10 Variant Consequences:")
+print(consequence_counts.head(10))
+
+# Filter for high-impact variants
+high_impact = df[
+    df['IMPACT'].isin(['HIGH', 'MODERATE'])
+]
+```
+
+## Data Formats
+
+### VCF (Variant Call Format)
+
+Standard format for storing gene sequence variations:
+
+```
+##fileformat=VCFv4.2
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  SAMPLE
+1       10177   .       A       AC      100     PASS    AC=2130;AF=0.425319 GT  0|1
+```
+
+### Parquet
+
+Optimized columnar format for analytics:
+- Faster query performance
+- Better compression
+- Schema evolution support
+- Column pruning and predicate pushdown
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Population Genetics Research">
+    Study genetic variation across different populations to understand human evolution and migration patterns.
+  </Accordion>
+
+  <Accordion title="Clinical Variant Interpretation">
+    Assess the clinical significance of genetic variants found in patient samples for diagnosis and treatment.
+  </Accordion>
+
+  <Accordion title="Drug Target Discovery">
+    Identify genetic variants associated with disease to discover new drug targets and therapeutic approaches.
+  </Accordion>
+
+  <Accordion title="Genome-Wide Association Studies (GWAS)">
+    Analyze genetic variants across the genome to identify associations with traits and diseases.
+  </Accordion>
+
+  <Accordion title="Variant Frequency Analysis">
+    Compare allele frequencies across populations to understand genetic diversity and identify rare variants.
+  </Accordion>
+</AccordionGroup>
+
+## Tools and Resources
+
+### AzCopy
+
+Command-line tool for bulk data transfer:
+
+```bash
+# Install AzCopy
+wget https://aka.ms/downloadazcopy-v10-linux
+tar -xvf downloadazcopy-v10-linux
+
+# Use AzCopy to download data
+./azcopy copy "https://dataset1000genomes.blob.core.windows.net/dataset/*" "." --recursive
+```
+
+### Azure Storage Explorer
+
+GUI application for browsing and managing Azure Storage:
+- [Download Azure Storage Explorer](https://azure.microsoft.com/features/storage-explorer/)
+
+### Python Libraries
+
+Recommended libraries for genomics analysis:
+
+```bash
+pip install pandas pyarrow pysam biopython scikit-allel
+```
+
+## Performance Optimization
+
+<Tabs>
+  <Tab title="Parquet vs VCF">
+    **Parquet format** provides significant performance improvements:
+    - 10-100x faster query performance
+    - 50-80% better compression
+    - Column-level operations without reading entire files
+  </Tab>
+  
+  <Tab title="Region Affinity">
+    **Colocate compute resources** in the same region as the data:
+    - 1000 Genomes: West US 2 or West Central US
+    - gnomAD: East US
+    - ClinVar: West US 2 or West Central US
+  </Tab>
+  
+  <Tab title="Distributed Processing">
+    **Use Spark** for large-scale analysis:
+    - Azure Databricks
+    - Azure Synapse Analytics
+    - HDInsight
+  </Tab>
+</Tabs>
+
+## Citations
+
+### 1000 Genomes
+
+```
+The 1000 Genomes Project Consortium.
+A global reference for human genetic variation.
+Nature 526, 68-74 (2015).
+https://doi.org/10.1038/nature15393
+```
+
+### gnomAD
+
+```
+Karczewski, K.J., Francioli, L.C., Tiao, G. et al.
+The mutational constraint spectrum quantified from variation in 141,456 humans.
+Nature 581, 434–443 (2020).
+https://doi.org/10.1038/s41586-020-2308-7
+```
+
+### ClinVar
+
+```
+Landrum, M.J., Lee, J.M., Benson, M. et al.
+ClinVar: improving access to variant interpretations and supporting evidence.
+Nucleic Acids Res. 46(D1):D1062-D1067 (2018).
+https://doi.org/10.1093/nar/gkx1153
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create ML Dataset" icon="plus" href="/open-datasets/how-to/create-dataset">
+    Learn how to create Azure ML datasets from genomics data
+  </Card>
+  <Card title="Browse Catalog" icon="book" href="/open-datasets/catalog">
+    Explore other available datasets
+  </Card>
+  <Card title="Public Holidays" icon="calendar" href="/open-datasets/datasets/public-holidays">
+    View public holidays dataset
+  </Card>
+  <Card title="COVID-19 Data" icon="virus" href="/open-datasets/datasets/covid-19">
+    Access COVID-19 tracking data
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [1000 Genomes Project Website](https://www.internationalgenome.org/)
+- [gnomAD Browser](https://gnomad.broadinstitute.org/)
+- [ClinVar Documentation](https://www.ncbi.nlm.nih.gov/clinvar/docs/)
+- [Genomics Notebook Repository](https://github.com/microsoft/genomicsnotebook)
+- [VCF to Parquet Conversion Tools](https://github.com/microsoft/genomicsnotebook/tree/main/vcf2parquet-conversion)

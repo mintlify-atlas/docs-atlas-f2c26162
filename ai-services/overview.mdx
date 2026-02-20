@@ -1,0 +1,212 @@
+---
+title: Azure AI Services Overview
+description: Cloud-based AI services for building intelligent applications with vision, language, speech, and decision capabilities
+---
+
+# Azure AI Services
+
+Azure AI Services are cloud-based artificial intelligence services that help developers build cognitive intelligence into applications without having direct AI or data science skills. These services provide pre-trained models and APIs across multiple AI domains.
+
+## Available AI Services
+
+Azure AI Services span four main categories: Vision, Language, Speech, and Decision APIs.
+
+<CardGroup cols={2}>
+  <Card title="Computer Vision" icon="eye" href="/ai-services/computer-vision/overview">
+    Analyze images and videos to extract visual features, detect objects, read text, and generate captions
+  </Card>
+  
+  <Card title="Document Intelligence" icon="file-invoice" href="/ai-services/document-intelligence/overview">
+    Extract text, tables, and structure from documents with OCR and intelligent document processing
+  </Card>
+  
+  <Card title="Custom Vision" icon="image" href="/ai-services/custom-vision/overview">
+    Build custom image classification and object detection models for your specific use cases
+  </Card>
+  
+  <Card title="Language" icon="language" href="/ai-services/language/overview">
+    Natural language processing for text analysis, entity recognition, sentiment analysis, and more
+  </Card>
+  
+  <Card title="Translator" icon="language" href="/ai-services/translator/overview">
+    Neural machine translation across 100+ languages with real-time text and document translation
+  </Card>
+  
+  <Card title="Speech" icon="microphone" href="/ai-services/speech/overview">
+    Speech-to-text, text-to-speech, speech translation, and voice recognition capabilities
+  </Card>
+  
+  <Card title="Anomaly Detector" icon="chart-line" href="/ai-services/anomaly-detector/overview">
+    Detect anomalies in time series data with univariate and multivariate detection (retiring)
+  </Card>
+  
+  <Card title="Personalizer" icon="user-check" href="/ai-services/personalizer/overview">
+    Reinforcement learning service for personalized content recommendations (retired)
+  </Card>
+  
+  <Card title="Content Understanding" icon="brain" href="/ai-services/content-understanding/overview">
+    Process and analyze documents, images, videos, and audio with generative AI
+  </Card>
+</CardGroup>
+
+## Service Categories
+
+### Vision Services
+
+Analyze visual content in images and videos:
+
+- **Computer Vision**: Extract text, detect objects, analyze images, generate captions
+- **Custom Vision**: Train custom image classification and object detection models
+- **Document Intelligence**: OCR and intelligent document processing for forms and documents
+- **Content Understanding**: Multimodal content analysis with generative AI
+
+### Language Services
+
+Understand and analyze text:
+
+- **Language**: NLP features including entity recognition, sentiment analysis, key phrase extraction, and summarization
+- **Translator**: Neural machine translation for text and documents across 100+ languages
+
+### Speech Services
+
+Process spoken language:
+
+- **Speech**: Speech-to-text transcription, text-to-speech synthesis, speech translation, and voice recognition
+
+### Decision Services (Retiring)
+
+- **Anomaly Detector**: Time series anomaly detection for monitoring and diagnostics
+- **Personalizer**: Reinforcement learning for content personalization
+
+## Development Options
+
+Azure AI Services can be accessed through multiple interfaces:
+
+<CardGroup cols={2}>
+  <Card title="REST APIs" icon="code">
+    Direct HTTP access to all service features with language-agnostic integration
+  </Card>
+  
+  <Card title="Client SDKs" icon="laptop-code">
+    Native libraries for C#, Python, Java, JavaScript, and other popular languages
+  </Card>
+  
+  <Card title="Azure Portal" icon="window">
+    Web-based interface for service management and configuration
+  </Card>
+  
+  <Card title="Containers" icon="docker">
+    Deploy services on-premises for compliance, security, or low-latency requirements
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Pre-trained Models
+
+All services provide pre-trained models that work out of the box without requiring machine learning expertise.
+
+### Custom Models
+
+Many services support training custom models on your own data:
+- Custom Vision for image recognition
+- Custom Speech for speech recognition
+- Custom Translator for domain-specific translation
+- Document Intelligence custom models
+
+### Enterprise Ready
+
+- **Security**: Authenticate with Azure Active Directory and managed identities
+- **Compliance**: Meet regulatory requirements with data residency and certifications
+- **Scalability**: Auto-scale to handle varying workloads
+- **Monitoring**: Track usage and performance with Azure Monitor
+
+## Pricing
+
+Azure AI Services use consumption-based pricing with different tiers:
+
+- **Free Tier (F0)**: Limited transactions for evaluation and development
+- **Standard Tier (S0)**: Pay-as-you-go pricing based on API calls
+- **Commitment Tiers**: Discounted rates for predictable usage
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Azure Account">
+    Sign up for a free Azure account at [azure.microsoft.com](https://azure.microsoft.com)
+  </Step>
+  
+  <Step title="Create AI Service Resource">
+    Use the Azure Portal to create a resource for the service you need
+  </Step>
+  
+  <Step title="Get API Keys">
+    Retrieve your endpoint URL and API keys from the resource
+  </Step>
+  
+  <Step title="Make API Calls">
+    Use REST APIs or SDKs to integrate AI capabilities into your application
+  </Step>
+</Steps>
+
+## Use Cases
+
+### Document Processing
+- Extract data from invoices, receipts, and forms
+- Automate document workflows
+- Digitize paper documents
+
+### Content Moderation
+- Detect inappropriate content in images and text
+- Monitor user-generated content
+- Ensure brand safety
+
+### Customer Experience
+- Add chatbots with natural language understanding
+- Transcribe and analyze call center conversations
+- Translate content for global audiences
+
+### Business Intelligence
+- Detect anomalies in metrics and KPIs
+- Extract insights from unstructured data
+- Automate data entry and processing
+
+## Regional Availability
+
+Azure AI Services are available in multiple Azure regions worldwide. Service availability varies by region:
+
+- **East US**: All services available
+- **West US**: All services available
+- **West Europe**: All services available
+- **Southeast Asia**: Most services available
+
+Check [Azure region availability](https://azure.microsoft.com/global-infrastructure/services/) for specific service availability.
+
+## Support and Resources
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book" href="https://docs.microsoft.com/azure/cognitive-services/">
+    Official Azure AI Services documentation
+  </Card>
+  
+  <Card title="Code Samples" icon="code" href="https://github.com/Azure-Samples">
+    Sample code and quickstarts on GitHub
+  </Card>
+  
+  <Card title="Support" icon="life-ring" href="https://azure.microsoft.com/support/">
+    Azure technical support and community forums
+  </Card>
+  
+  <Card title="Training" icon="graduation-cap" href="https://docs.microsoft.com/learn/azure/">
+    Microsoft Learn training modules and learning paths
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+Explore individual services to learn about their specific capabilities:
+
+- [Computer Vision](/ai-services/computer-vision/overview) - Image and video analysis
+- [Language](/ai-services/language/overview) - Text analytics and NLP
+- [Speech](/ai-services/speech/overview) - Speech recognition and synthesis
+- [Translator](/ai-services/translator/overview) - Machine translation

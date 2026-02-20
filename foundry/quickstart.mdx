@@ -1,0 +1,333 @@
+---
+title: Microsoft Foundry Quickstart
+description: Get started with Microsoft Foundry SDK building AI applications with agents, models, and tools.
+---
+
+# Microsoft Foundry Quickstart
+
+This quickstart will help you get started with Microsoft Foundry by creating a project, deploying a model, running chat completions, and creating an agent with file search capabilities.
+
+## Prerequisites
+
+- An Azure subscription ([Create one for free](https://azure.microsoft.com/free/))
+- Azure CLI installed and authenticated
+- Python 3.8 or later (for Python examples)
+
+## Step 1: Create a Foundry Project
+
+A Foundry project is where you do most of your development work. Projects provide isolation for agents, models, and data.
+
+<Steps>
+  <Step title="Sign in to Azure">
+    ```bash
+    az login
+    ```
+  </Step>
+  
+  <Step title="Create a Foundry resource and project">
+    You can create resources using the Azure portal or deploy using Azure CLI with Bicep templates.
+    
+    For a basic setup:
+    
+    ```bash
+    # Deploy basic agent setup
+    az deployment group create \
+      --resource-group <your-resource-group> \
+      --template-uri https://raw.githubusercontent.com/azure-ai-foundry/foundry-samples/main/infrastructure/infrastructure-setup-bicep/40-basic-agent-setup/azuredeploy.json
+    ```
+    
+    This creates:
+    - Foundry account
+    - Foundry project
+    - GPT-4.1 model deployment
+  </Step>
+  
+  <Step title="Get your project endpoint">
+    After deployment, navigate to your project in the Azure portal and copy the endpoint URL:
+    
+    ```
+    https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
+    ```
+  </Step>
+</Steps>
+
+## Step 2: Install the SDK
+
+<CodeGroup>
+```bash Python
+pip install openai azure-identity azure-ai-projects==1.0.0
+```
+
+```bash C#
+dotnet add package Azure.Identity
+dotnet add package Azure.AI.Projects
+dotnet add package Azure.AI.Agents.Persistent
+```
+
+```bash TypeScript
+npm install @azure/ai-projects @azure/identity
+```
+
+```bash Java
+# Add to pom.xml
+<dependency>
+  <groupId>com.azure</groupId>
+  <artifactId>azure-ai-projects</artifactId>
+  <version>1.0.0-beta.3</version>
+</dependency>
+```
+</CodeGroup>
+
+## Step 3: Chat with a Model
+
+Create your first chat completion using a deployed model.
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+# Initialize project client
+project = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential(),
+)
+
+# Get OpenAI client
+models = project.get_openai_client(api_version="2024-10-21")
+
+# Create chat completion
+response = models.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "What is the size of France in square miles?"},
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+
+```csharp C#
+using Azure.AI.Projects;
+using Azure.Identity;
+using Azure.AI.Inference;
+
+string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+AIProjectClient projectClient = new AIProjectClient(new Uri(endpoint), new DefaultAzureCredential());
+
+ClientConnection connection = projectClient.GetConnection(typeof(AzureOpenAIClient).FullName!);
+if (!connection.TryGetLocatorAsUri(out Uri uri) || uri is null)
+{
+    throw new InvalidOperationException("Invalid URI.");
+}
+uri = new Uri($"https://{uri.Host}");
+
+AzureOpenAIClient azureOpenAIClient = new AzureOpenAIClient(uri, new DefaultAzureCredential());
+ChatClient chatClient = azureOpenAIClient.GetChatClient("gpt-4o");
+
+ChatCompletion result = chatClient.CompleteChat("What is the size of France in square miles?");
+Console.WriteLine(result.Content[0].Text);
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+const project = new AIProjectClient(endpoint, new DefaultAzureCredential());
+
+const client = await project.getAzureOpenAIClient({ apiVersion: "2024-12-01-preview" });
+const chatCompletion = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+        { role: "system", content: "You are a helpful assistant" },
+        { role: "user", content: "What is the size of France in square miles?" },
+    ],
+});
+
+console.log(chatCompletion.choices[0].message.content);
+```
+</CodeGroup>
+
+## Step 4: Create an Agent
+
+Create an intelligent agent that can assist with tasks.
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+import os
+import time
+
+# Initialize client
+project = AIProjectClient(
+    endpoint=os.environ["PROJECT_ENDPOINT"],
+    credential=DefaultAzureCredential(),
+)
+
+# Create agent
+agent = project.agents.create_agent(
+    model=os.environ["MODEL_DEPLOYMENT_NAME"],
+    name="my-agent",
+    instructions="You are a helpful assistant",
+)
+print(f"Created agent, ID: {agent.id}")
+
+# Create thread
+thread = project.agents.threads.create()
+print(f"Created thread, ID: {thread.id}")
+
+# Send message
+message = project.agents.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Hello, what can you help me with?",
+)
+
+# Run agent
+run = project.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
+
+# Wait for completion
+while run.status in ["queued", "in_progress"]:
+    time.sleep(1)
+    run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+
+print(f"Run completed with status: {run.status}")
+
+# Get messages
+messages = project.agents.messages.list(thread_id=thread.id)
+for msg in messages:
+    print(f"{msg['role']}: {msg['content']}")
+
+# Cleanup
+project.agents.delete_agent(agent.id)
+```
+
+```csharp C#
+using Azure.AI.Agents.Persistent;
+using Azure.Identity;
+
+var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
+var modelDeploymentName = Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME");
+
+PersistentAgentsClient client = new(projectEndpoint, new DefaultAzureCredential());
+
+PersistentAgent agent = client.Administration.CreateAgent(
+    model: modelDeploymentName,
+    name: "My Agent",
+    instructions: "You are a helpful assistant."
+);
+
+PersistentAgentThread thread = client.Threads.CreateThread();
+
+client.Messages.CreateMessage(
+    thread.Id,
+    MessageRole.User,
+    "Hello, what can you help me with?"
+);
+
+ThreadRun run = client.Runs.CreateRun(thread.Id, agent.Id);
+
+do
+{
+    Thread.Sleep(TimeSpan.FromMilliseconds(500));
+    run = client.Runs.GetRun(thread.Id, run.Id);
+}
+while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
+
+Console.WriteLine($"Run completed with status: {run.Status}");
+
+client.Administration.DeleteAgent(agent.Id);
+```
+</CodeGroup>
+
+## Step 5: Add File Search to Your Agent
+
+Enhance your agent with knowledge retrieval capabilities.
+
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import FileSearchTool, FilePurpose
+from azure.identity import DefaultAzureCredential
+import os
+
+project = AIProjectClient(
+    endpoint=os.environ["PROJECT_ENDPOINT"],
+    credential=DefaultAzureCredential(),
+)
+
+# Upload file
+file = project.agents.files.upload_and_poll(
+    file_path="product_info_1.md",
+    purpose=FilePurpose.AGENTS
+)
+print(f"Uploaded file, file ID: {file.id}")
+
+# Create file search tool with file
+file_search_tool = FileSearchTool(file_ids=[file.id])
+
+# Create agent with file search
+agent = project.agents.create_agent(
+    model=os.environ["MODEL_DEPLOYMENT_NAME"],
+    name="file-search-agent",
+    instructions="You are a helpful assistant that can search information from uploaded files.",
+    tools=file_search_tool.definitions,
+    tool_resources=file_search_tool.resources,
+)
+
+print(f"Created agent with file search, agent ID: {agent.id}")
+
+# Create thread and ask question
+thread = project.agents.threads.create()
+message = project.agents.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="What products does Contoso offer?",
+)
+
+# Run and wait for completion
+run = project.agents.runs.create_and_poll(
+    thread_id=thread.id,
+    agent_id=agent.id
+)
+
+if run.status == "completed":
+    messages = project.agents.messages.list(thread_id=thread.id)
+    for msg in messages:
+        print(f"{msg['role']}: {msg['content']}")
+
+# Cleanup
+project.agents.delete_agent(agent.id)
+project.agents.files.delete(file.id)
+```
+</CodeGroup>
+
+## Next Steps
+
+Now that you've created your first agent with file search, explore more capabilities:
+
+<CardGroup cols={2}>
+  <Card title="Agent Overview" icon="robot" href="/foundry/agents/overview">
+    Learn about Foundry Agent Service capabilities
+  </Card>
+  <Card title="Environment Setup" icon="gear" href="/foundry/agents/environment-setup">
+    Configure your agent environment
+  </Card>
+  <Card title="Agent Tools" icon="wrench" href="/foundry/agents/tools/code-interpreter">
+    Explore built-in tools for agents
+  </Card>
+  <Card title="SDK Overview" icon="code" href="/foundry/sdk-overview">
+    Deep dive into the Foundry SDK
+  </Card>
+</CardGroup>
+
+## Clean Up Resources
+
+To avoid incurring charges, delete the resources you created:
+
+```bash
+az group delete --name <your-resource-group> --yes --no-wait
+```

@@ -1,0 +1,129 @@
+---
+title: Azure Open Datasets Catalog
+description: Browse the complete catalog of datasets available in Azure Open Datasets.
+---
+
+# Azure Open Datasets Catalog
+
+Improve the accuracy of your machine learning models with publicly available datasets. To save time on data discovery and preparation, use curated datasets that are ready for machine learning projects.
+
+## Transportation
+
+| Dataset | Description |
+|---------|-------------|
+| [TartanAir: AirSim Simulation Dataset](dataset-tartanair-simulation) | AirSim autonomous vehicle data generated to solve Simultaneous Localization and Mapping (SLAM) |
+| [NYC Taxi - Yellow](dataset-taxi-yellow) | Yellow taxi trip records with pickup/drop-off dates/times, locations, distances, fares, rate types, payment types, and passenger counts |
+| [NYC Taxi - Green](dataset-taxi-green) | Green taxi trip records with pickup/drop-off dates/times, locations, distances, fares, rate types, payment types, and passenger counts |
+| [NYC Taxi - For-Hire Vehicle](dataset-taxi-for-hire-vehicle) | For-Hire Vehicle trip records including dispatching base license number, pickup date, time, and taxi zone location ID |
+
+## Health and Genomics
+
+| Dataset | Description |
+|---------|-------------|
+| [COVID-19 Data Lake](dataset-covid-19-data-lake) | Collection of COVID-19 related datasets covering testing, patient outcomes, social distancing policy, hospital capacity, and mobility |
+| [Bing COVID-19](datasets/covid-19) | Daily updates of confirmed, fatal, and recovered COVID-19 cases from all regions worldwide |
+| [1000 Genomes](datasets/genomics) | Largest public catalog of human variation and genotype data with 2,504 individuals from 26 populations and 84 million variants |
+| [gnomAD](datasets/genomics) | Genome Aggregation Database harmonizing exome and genome sequencing data from large-scale projects |
+| [ClinVar Annotations](datasets/genomics) | Public archive of relationships between human variations and phenotypes |
+
+## Labor and Economics
+
+| Dataset | Description |
+|---------|-------------|
+| [US Labor Force Statistics](dataset-us-labor-force) | Labor force statistics, participation rates, and civilian noninstitutional population by age, gender, race, and ethnic groups |
+| [US National Employment Hours and Earnings](dataset-us-national-employment-earnings) | Detailed industry estimates of nonfarm employment, hours, and earnings of workers on payrolls |
+| [US State Employment Hours and Earnings](dataset-us-state-employment-earnings) | State-level industry estimates of nonfarm employment, hours, and earnings |
+| [US Local Area Unemployment Statistics](dataset-us-local-unemployment) | Monthly and annual employment, unemployment, and labor force data for regions, states, counties, and metropolitan areas |
+| [US Consumer Price Index](dataset-us-consumer-price-index) | Average change over time in prices paid by urban consumers for consumer goods and services |
+| [US Producer Price Index - Industry](dataset-us-producer-price-index-industry) | Average change in selling prices received by domestic producers by industry |
+| [US Producer Price Index - Commodities](dataset-us-producer-price-index-commodities) | Average change in selling prices received by domestic producers by commodity |
+
+## Population and Safety
+
+| Dataset | Description |
+|---------|-------------|
+| [US Population by County](dataset-us-population-county) | US population by gender and race for each county from Census data |
+| [US Population by ZIP Code](dataset-us-population-zip) | US population by gender and race for each ZIP code from Census data |
+| [Boston Safety Data](dataset-boston-safety) | 311 calls reported to the city of Boston (daily updates, Parquet format) |
+| [Chicago Safety Data](dataset-chicago-safety) | 311 calls reported to the city of Chicago (daily updates, Parquet format) |
+| [New York City Safety Data](dataset-new-york-city-safety) | All NYC 311 service requests from 2010 to present (daily updates, Parquet format) |
+| [San Francisco Safety Data](dataset-san-francisco-safety) | Fire department calls for service and 311 cases in San Francisco from 2015 to present |
+| [Seattle Safety Data](dataset-seattle-safety) | Seattle Fire Department 911 dispatches from 2010 to present |
+
+## Supplemental and Common Datasets
+
+| Dataset | Description |
+|---------|-------------|
+| [Diabetes](dataset-diabetes) | 442 samples with 10 features, ideal for getting started with machine learning algorithms |
+| [OJ Sales Simulated Data](dataset-oj-sales-simulated) | Simulated sales data designed for training thousands of models simultaneously |
+| [MNIST](dataset-mnist) | Database of handwritten digits with 60,000 training examples and 10,000 test examples |
+| [Microsoft News Recommendation](dataset-microsoft-news) | Large-scale dataset for news recommendation research and recommender systems |
+| [Public Holidays](datasets/public-holidays) | Worldwide public holiday data for 38 countries from 1970 to 2099 |
+| [Russian Open Speech to Text](dataset-open-speech-text) | Large-scale open speech to text dataset for the Russian language |
+
+## Dataset Formats
+
+Datasets are available in multiple formats:
+
+- **Parquet**: Optimized columnar format for analytics workloads
+- **CSV**: Universal compatibility for data analysis tools
+- **JSON/JSON-Lines**: Flexible format for nested data structures
+- **Tabular Dataset**: Azure ML dataset type for structured data
+- **File Dataset**: Azure ML dataset type for file-based workflows
+
+## Access Patterns
+
+### Python SDK Access
+
+```python
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_pandas_dataframe()
+```
+
+### Direct Blob Storage Access
+
+```python
+import pandas as pd
+
+# Read directly from Azure Blob Storage
+df = pd.read_parquet(
+    "https://azureopendatastorage.blob.core.windows.net/dataset/..."
+)
+```
+
+### Azure Databricks Access
+
+```python
+# Configure blob storage access
+blob_account_name = "azureopendatastorage"
+wasbs_path = f"wasbs://{container_name}@{blob_account_name}.blob.core.windows.net/{path}"
+
+# Read with Spark
+df = spark.read.parquet(wasbs_path)
+```
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Create Your First Dataset" icon="plus" href="/open-datasets/how-to/create-dataset">
+    Learn how to create Azure ML datasets from Open Datasets
+  </Card>
+  <Card title="Public Holidays Dataset" icon="calendar" href="/open-datasets/datasets/public-holidays">
+    Explore the worldwide public holidays dataset
+  </Card>
+  <Card title="COVID-19 Data" icon="virus" href="/open-datasets/datasets/covid-19">
+    Access COVID-19 tracking data from around the world
+  </Card>
+  <Card title="Genomics Datasets" icon="dna" href="/open-datasets/datasets/genomics">
+    Browse genomics datasets for research
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+For questions or to request additional datasets, contact [aod@microsoft.com](mailto:aod@microsoft.com).

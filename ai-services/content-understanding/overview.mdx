@@ -1,0 +1,444 @@
+---
+title: Content Understanding Overview
+description: Process and analyze documents, images, videos, and audio with generative AI for intelligent content ingestion
+---
+
+# Content Understanding
+
+Azure Content Understanding is a generative AI service that processes and analyzes documents, images, videos, and audio to extract structured information. It uses advanced AI models to reason over unstructured content and convert it into formats suitable for automation, analytics, and AI applications.
+
+## What is Content Understanding?
+
+Content Understanding transforms unstructured multimodal content into structured, actionable data:
+
+- **Documents**: Extract text, tables, figures with descriptions
+- **Images**: Analyze visual content and generate descriptions
+- **Videos**: Transcribe speech, describe scenes, detect faces
+- **Audio**: Transcribe and analyze audio content
+
+<CardGroup cols={2}>
+  <Card title="Multimodal Analysis" icon="layer-group">
+    Process any combination of documents, images, videos, and audio
+  </Card>
+  
+  <Card title="Structured Output" icon="table">
+    Extract data as JSON fields or Markdown for downstream processing
+  </Card>
+  
+  <Card title="Confidence Scores" icon="chart-line">
+    Reliability scores for extracted values to minimize manual review
+  </Card>
+  
+  <Card title="Prebuilt Analyzers" icon="boxes-stacked">
+    Industry-specific analyzers for common scenarios
+  </Card>
+</CardGroup>
+
+## Key Components
+
+### Analyzers
+
+Analyzers define how content is processed:
+
+- **Prebuilt Analyzers**: Ready-to-use for common scenarios
+- **Custom Analyzers**: Tailored to your specific needs
+- Configure content extraction and field extraction
+- Consistent processing across all documents
+
+### Content Extraction
+
+Extract structured content from inputs:
+
+- **OCR**: Extract text from images and documents
+- **Layout Analysis**: Identify paragraphs, sections, tables
+- **Selection Marks**: Detect checkboxes and radio buttons
+- **Barcodes**: Read 1D and 2D barcodes
+- **Formulas**: Extract mathematical formulas
+- **Speech Transcription**: Convert audio to text
+- **Visual Analysis**: Describe images and video frames
+
+### Field Extraction
+
+Generate structured key-value pairs:
+
+<Tabs>
+  <Tab title="Extract">
+    Directly extract values from content:
+    
+    ```json
+    {
+      "fields": {
+        "invoice_number": {
+          "type": "string",
+          "method": "extract"
+        },
+        "total_amount": {
+          "type": "number",
+          "method": "extract"
+        },
+        "invoice_date": {
+          "type": "date",
+          "method": "extract"
+        }
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Classify">
+    Classify content into categories:
+    
+    ```json
+    {
+      "fields": {
+        "document_type": {
+          "type": "string",
+          "method": "classify",
+          "enum": ["invoice", "receipt", "contract"]
+        },
+        "sentiment": {
+          "type": "string",
+          "method": "classify",
+          "enum": ["positive", "negative", "neutral"]
+        }
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Generate">
+    Generate values from content:
+    
+    ```json
+    {
+      "fields": {
+        "summary": {
+          "type": "string",
+          "method": "generate",
+          "description": "A brief summary of the document content"
+        },
+        "key_points": {
+          "type": "array",
+          "method": "generate",
+          "description": "List of main points from the document"
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Use Cases
+
+### Intelligent Document Processing (IDP)
+
+Automate document workflows:
+
+- Extract data from invoices, receipts, forms
+- Validate field values with confidence scores
+- Route documents based on classification
+- Reduce manual data entry
+- Ensure compliance and auditability
+
+### Retrieval-Augmented Generation (RAG)
+
+Enhance search and knowledge bases:
+
+- Convert content to Markdown for indexing
+- Extract text from figures and charts
+- Preserve document structure
+- Generate comprehensive descriptions
+- Capture handwritten annotations
+
+### Agentic Applications
+
+Build AI agents that process content:
+
+- Clean multimodal inputs for agents
+- Standardize file formats
+- Extract structured data for decision-making
+- Provide grounded, auditable outputs
+- Enable agent reasoning over documents
+
+### Media Asset Management
+
+Analyze and organize media:
+
+- Extract metadata from videos
+- Generate scene descriptions
+- Transcribe audio content
+- Identify key moments
+- Enable semantic search
+
+### Call Center Analytics
+
+Analyze customer interactions:
+
+- Transcribe call recordings
+- Extract sentiment and key topics
+- Identify customer issues
+- Track performance metrics
+- Generate insights and reports
+
+## Industry Applications
+
+<AccordionGroup>
+  <Accordion title="Tax Automation">
+    - Extract data from tax documents (W-2, 1099, 1040)
+    - Validate taxpayer information
+    - Generate unified tax returns
+    - Ensure accuracy and compliance
+  </Accordion>
+  
+  <Accordion title="Mortgage Processing">
+    - Analyze loan applications (1003 URLA)
+    - Process appraisals (1004 URAR)
+    - Verify employment (1005)
+    - Review closing documents
+    - Automate Fannie Mae/Freddie Mac compliance
+  </Accordion>
+  
+  <Accordion title="Contract Analysis">
+    - Extract key terms and conditions
+    - Identify parties and obligations
+    - Compare contracts to invoices
+    - Validate compliance
+    - Support legal review
+  </Accordion>
+  
+  <Accordion title="Healthcare">
+    - Process medical records
+    - Extract clinical information
+    - Analyze diagnostic images
+    - Support care coordination
+    - Ensure HIPAA compliance
+  </Accordion>
+</AccordionGroup>
+
+## Prebuilt Analyzers
+
+Ready-to-use analyzers for common scenarios:
+
+### Document Analyzers
+
+- **General Document**: Extract text and layout
+- **Invoice**: Extract invoice fields
+- **Receipt**: Extract receipt information
+- **Tax Forms**: Process W-2, 1099, 1040 forms
+- **ID Documents**: Extract from licenses and passports
+- **Health Insurance**: Process insurance cards
+
+### Video Analyzers
+
+- **General Video**: Transcribe and describe scenes
+- **Media Analysis**: Extract rich video metadata
+- **Meeting Analysis**: Transcribe and summarize meetings
+
+### Audio Analyzers
+
+- **General Audio**: Transcribe speech
+- **Call Center**: Analyze customer calls
+- **Meeting**: Transcribe and extract action items
+
+## API Usage
+
+### Analyze Document
+
+```python
+import requests
+import json
+
+endpoint = "https://<resource>.cognitiveservices.azure.com"
+api_key = "<your-key>"
+analyzer_id = "prebuilt-invoice"
+
+headers = {
+    "Content-Type": "application/json",
+    "Ocp-Apim-Subscription-Key": api_key
+}
+
+# Analyze from URL
+data = {
+    "urlSource": "https://example.com/invoice.pdf"
+}
+
+response = requests.post(
+    f"{endpoint}/contentunderstanding/analyzers/{analyzer_id}:analyze",
+    headers=headers,
+    json=data,
+    params={"api-version": "2025-11-01"}
+)
+
+operation_location = response.headers["Operation-Location"]
+
+# Poll for results
+while True:
+    result = requests.get(operation_location, headers=headers)
+    status = result.json()["status"]
+    
+    if status == "succeeded":
+        analysis = result.json()["analyzeResult"]
+        break
+    elif status == "failed":
+        raise Exception("Analysis failed")
+    
+    time.sleep(2)
+
+# Extract fields
+for document in analysis["documents"]:
+    fields = document["fields"]
+    print(f"Invoice Number: {fields['InvoiceId']['value']}")
+    print(f"Total: {fields['InvoiceTotal']['value']}")
+    print(f"Vendor: {fields['VendorName']['value']}")
+```
+
+### Analyze Video
+
+```python
+# Analyze video content
+analyzer_id = "prebuilt-video"
+
+data = {
+    "urlSource": "https://example.com/video.mp4"
+}
+
+response = requests.post(
+    f"{endpoint}/contentunderstanding/analyzers/{analyzer_id}:analyze",
+    headers=headers,
+    json=data,
+    params={"api-version": "2025-11-01"}
+)
+
+# Get results
+analysis = poll_for_results(response.headers["Operation-Location"])
+
+# Extract video metadata
+for scene in analysis["scenes"]:
+    print(f"Scene {scene['sceneId']}:")
+    print(f"  Timestamp: {scene['timestamp']}")
+    print(f"  Description: {scene['description']}")
+    print(f"  Transcript: {scene['transcript']}")
+```
+
+## Custom Analyzers
+
+Create analyzers for your specific needs:
+
+```json
+{
+  "name": "purchase-order-analyzer",
+  "description": "Extract data from purchase orders",
+  "contentExtraction": {
+    "enableOcr": true,
+    "enableLayout": true,
+    "enableTables": true
+  },
+  "fieldExtraction": {
+    "fields": {
+      "po_number": {
+        "type": "string",
+        "method": "extract",
+        "description": "Purchase order number"
+      },
+      "vendor_name": {
+        "type": "string",
+        "method": "extract"
+      },
+      "line_items": {
+        "type": "array",
+        "method": "extract",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {"type": "string"},
+            "quantity": {"type": "number"},
+            "unit_price": {"type": "number"},
+            "total": {"type": "number"}
+          }
+        }
+      },
+      "total_amount": {
+        "type": "number",
+        "method": "extract"
+      }
+    }
+  }
+}
+```
+
+## Confidence Scores and Grounding
+
+Ensure data quality:
+
+### Confidence Scores
+
+- Range: 0 to 1 (higher is better)
+- Indicates reliability of extracted value
+- Enable automated vs. manual review routing
+- Configure in analyzer settings
+
+### Grounding
+
+- Links extracted values to source content
+- Provides bounding boxes for verification
+- Enables quick validation
+- Supports audit requirements
+
+```python
+# Access confidence and grounding
+for field_name, field in document["fields"].items():
+    print(f"{field_name}: {field['value']}")
+    print(f"  Confidence: {field['confidence']}")
+    print(f"  Source: Page {field['boundingRegions'][0]['pageNumber']}")
+    print(f"  Location: {field['boundingRegions'][0]['polygon']}")
+```
+
+## Input Requirements
+
+- **Documents**: PDF, JPEG, PNG, TIFF, BMP, HEIF (up to 500 MB)
+- **Videos**: MP4, AVI, MOV (up to 2 GB)
+- **Audio**: WAV, MP3, OGG, FLAC (up to 1 GB)
+- **Images**: JPEG, PNG, BMP, GIF (up to 20 MB)
+
+## Region Availability
+
+Content Understanding is available in:
+- East US
+- West US 2
+- West Europe
+- And expanding to more regions
+
+## Pricing
+
+- Pay per page for documents
+- Pay per minute for videos and audio
+- Custom analyzer training costs
+- Storage costs for training data
+- Model deployment charges
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create a Content Understanding resource or Foundry Hub
+  </Step>
+  
+  <Step title="Choose Analyzer">
+    Select prebuilt analyzer or create custom analyzer
+  </Step>
+  
+  <Step title="Analyze Content">
+    Use REST API or SDK to process documents
+  </Step>
+  
+  <Step title="Extract Results">
+    Retrieve structured data and integrate into workflows
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [Try Content Understanding Studio](https://documentintelligence.ai.azure.com/)
+- [View REST API Guide](https://learn.microsoft.com/azure/ai-services/content-understanding/quickstart/use-rest-api)
+- [Explore Prebuilt Analyzers](https://learn.microsoft.com/azure/ai-services/content-understanding/concepts/prebuilt-analyzers)
+- [Create Custom Analyzer](https://learn.microsoft.com/azure/ai-services/content-understanding/tutorial/create-custom-analyzer)

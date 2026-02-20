@@ -1,0 +1,484 @@
+---
+title: Azure Language Overview
+description: Natural language processing features for text analysis, entity recognition, sentiment analysis, and conversational AI
+---
+
+# Azure Language
+
+Azure Language is a cloud-based service providing Natural Language Processing (NLP) features for understanding and analyzing text. Build intelligent applications with pre-configured and customizable language models for text analytics, entity extraction, sentiment analysis, and conversational AI.
+
+## Key Capabilities
+
+<CardGroup cols={3}>
+  <Card title="Text Analytics" icon="file-lines">
+    Extract insights from unstructured text
+  </Card>
+  
+  <Card title="Entity Recognition" icon="tag">
+    Identify and categorize entities in text
+  </Card>
+  
+  <Card title="Sentiment Analysis" icon="face-smile">
+    Determine sentiment and opinions
+  </Card>
+  
+  <Card title="Summarization" icon="compress">
+    Generate summaries of documents and conversations
+  </Card>
+  
+  <Card title="Q&A" icon="message-question">
+    Build question answering systems
+  </Card>
+  
+  <Card title="Custom Models" icon="wand-magic-sparkles">
+    Train models for your specific domain
+  </Card>
+</CardGroup>
+
+## Pre-configured Features
+
+Ready-to-use NLP capabilities that require no training:
+
+### Named Entity Recognition (NER)
+
+Identify and categorize entities in text:
+
+- **Person**: Names of people
+- **Location**: Cities, countries, landmarks
+- **Organization**: Companies, agencies, institutions
+- **DateTime**: Dates, times, durations
+- **Quantity**: Numbers, measurements, percentages
+- **Email, URL, Phone Number**: Contact information
+
+```python
+from azure.ai.textanalytics import TextAnalyticsClient
+from azure.core.credentials import AzureKeyCredential
+
+client = TextAnalyticsClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<key>")
+)
+
+documents = [
+    "Microsoft was founded by Bill Gates and Paul Allen in Redmond, Washington."
+]
+
+result = client.recognize_entities(documents)
+for doc in result:
+    for entity in doc.entities:
+        print(f"{entity.text} ({entity.category})")
+```
+
+### Personally Identifiable Information (PII) Detection
+
+Detect and redact sensitive information:
+
+- **Personal**: Names, addresses, phone numbers
+- **Financial**: Credit card numbers, bank accounts
+- **Medical**: Health information (PHI)
+- **Government**: SSN, passport numbers, tax IDs
+
+```python
+result = client.recognize_pii_entities(
+    documents=["My SSN is 123-45-6789 and my email is user@example.com"],
+    language="en"
+)
+
+for doc in result:
+    for entity in doc.entities:
+        print(f"PII: {entity.text} ({entity.category})")
+    print(f"Redacted: {doc.redacted_text}")
+```
+
+### Sentiment Analysis and Opinion Mining
+
+Analyze sentiment at document and sentence level:
+
+- **Overall sentiment**: Positive, negative, neutral, mixed
+- **Confidence scores**: For each sentiment category
+- **Opinion mining**: Link opinions to specific aspects
+
+```python
+result = client.analyze_sentiment(
+    documents=["The food was excellent but the service was slow."],
+    show_opinion_mining=True
+)
+
+for doc in result:
+    print(f"Document sentiment: {doc.sentiment}")
+    print(f"Positive: {doc.confidence_scores.positive}")
+    print(f"Negative: {doc.confidence_scores.negative}")
+    
+    for sentence in doc.sentences:
+        print(f"  Sentence: {sentence.text}")
+        print(f"  Sentiment: {sentence.sentiment}")
+        
+        for opinion in sentence.mined_opinions:
+            print(f"    Target: {opinion.target.text} ({opinion.target.sentiment})")
+```
+
+### Key Phrase Extraction
+
+Extract main concepts from text:
+
+- Identify key topics and themes
+- Extract important phrases
+- Summarize main points
+
+```python
+result = client.extract_key_phrases(
+    documents=["Azure Language provides powerful NLP capabilities for analyzing text."]
+)
+
+for doc in result:
+    print("Key phrases:")
+    for phrase in doc.key_phrases:
+        print(f"  - {phrase}")
+```
+
+### Language Detection
+
+Detect language of text:
+
+- Identify from 120+ languages
+- Return language code and name
+- Confidence score for detection
+
+```python
+result = client.detect_language(
+    documents=["Bonjour, comment allez-vous?"]
+)
+
+for doc in result:
+    print(f"Language: {doc.primary_language.name}")
+    print(f"ISO code: {doc.primary_language.iso6391_name}")
+    print(f"Confidence: {doc.primary_language.confidence_score}")
+```
+
+### Summarization
+
+Generate summaries of text and conversations:
+
+#### Extractive Summarization
+Extract key sentences from document:
+
+```python
+from azure.ai.textanalytics import ExtractiveSummaryAction
+
+poller = client.begin_analyze_actions(
+    documents=[long_document],
+    actions=[ExtractiveSummaryAction(max_sentence_count=3)]
+)
+
+for result in poller.result():
+    for summary_result in result:
+        for sentence in summary_result.sentences:
+            print(sentence.text)
+```
+
+#### Abstractive Summarization
+Generate new summary text:
+
+```python
+from azure.ai.textanalytics import AbstractiveSummaryAction
+
+poller = client.begin_analyze_actions(
+    documents=[long_document],
+    actions=[AbstractiveSummaryAction()]
+)
+
+for result in poller.result():
+    for summary_result in result:
+        for summary in summary_result.summaries:
+            print(summary.text)
+```
+
+#### Conversation Summarization
+Summarize meetings and calls:
+
+- Chapter summaries for long meetings
+- Issue and resolution extraction (call centers)
+- Follow-up actions and items
+
+### Entity Linking
+
+Disambiguate entities and link to Wikipedia:
+
+```python
+result = client.recognize_linked_entities(
+    documents=["Microsoft was founded in Albuquerque."]
+)
+
+for doc in result:
+    for entity in doc.entities:
+        print(f"Name: {entity.name}")
+        print(f"URL: {entity.url}")
+        print(f"Data source: {entity.data_source}")
+```
+
+### Text Analytics for Health
+
+Extract medical information from clinical text:
+
+- **Conditions**: Diagnoses, symptoms
+- **Medications**: Drugs, dosages
+- **Procedures**: Treatments, examinations  
+- **Anatomy**: Body structures
+- **Relations**: Connections between entities
+
+```python
+from azure.ai.textanalytics import HealthcareEntityRelation
+
+poller = client.begin_analyze_healthcare_entities(
+    documents=["Patient prescribed 50mg of ibuprofen for headache."]
+)
+
+for result in poller.result():
+    for doc in result:
+        for entity in doc.entities:
+            print(f"{entity.text} ({entity.category})")
+        
+        for relation in doc.entity_relations:
+            print(f"Relation: {relation.relation_type}")
+```
+
+## Custom Features
+
+Train models specific to your domain:
+
+### Custom Named Entity Recognition
+
+Train models to extract domain-specific entities:
+
+- Define custom entity categories
+- Label training data
+- Train and deploy models
+- 50+ labeled documents recommended
+
+```python
+from azure.ai.textanalytics import RecognizeCustomEntitiesAction
+
+poller = client.begin_analyze_actions(
+    documents=["Order #12345 shipped to warehouse A."],
+    actions=[
+        RecognizeCustomEntitiesAction(
+            project_name="my-project",
+            deployment_name="production"
+        )
+    ]
+)
+
+for result in poller.result():
+    for entity_result in result:
+        for entity in entity_result.entities:
+            print(f"{entity.text} ({entity.category})")
+```
+
+### Custom Text Classification
+
+Classify documents into custom categories:
+
+- **Single-label**: Each document gets one category
+- **Multi-label**: Documents can have multiple categories
+- Define your own classification schema
+- 50+ labeled documents per class
+
+```python
+from azure.ai.textanalytics import SingleLabelClassifyAction
+
+poller = client.begin_analyze_actions(
+    documents=["Customer requesting refund for damaged product."],
+    actions=[
+        SingleLabelClassifyAction(
+            project_name="ticket-classifier",
+            deployment_name="production"
+        )
+    ]
+)
+
+for result in poller.result():
+    for classification_result in result:
+        for classification in classification_result.classifications:
+            print(f"Category: {classification.category}")
+            print(f"Confidence: {classification.confidence_score}")
+```
+
+### Conversational Language Understanding (CLU)
+
+Build conversational AI models:
+
+- **Intents**: What the user wants to do
+- **Entities**: Key information to extract
+- **Utterances**: Example phrases
+- Train with Language Studio
+
+```python
+from azure.ai.language.conversations import ConversationAnalysisClient
+
+clu_client = ConversationAnalysisClient(endpoint, credential)
+
+result = clu_client.analyze_conversation(
+    task={
+        "kind": "Conversation",
+        "analysisInput": {
+            "conversationItem": {
+                "text": "Book a flight to Seattle for next Friday",
+                "id": "1",
+                "participantId": "user"
+            }
+        },
+        "parameters": {
+            "projectName": "travel-assistant",
+            "deploymentName": "production"
+        }
+    }
+)
+
+print(f"Intent: {result['result']['prediction']['topIntent']}")
+for entity in result['result']['prediction']['entities']:
+    print(f"Entity: {entity['category']} = {entity['text']}")
+```
+
+### Question Answering
+
+Build custom Q&A systems:
+
+- Import from documents, URLs, FAQs
+- Add question-answer pairs manually
+- Train conversational models
+- Multi-turn conversations
+- Chitchat personalities
+
+```python
+from azure.ai.language.questionanswering import QuestionAnsweringClient
+
+qa_client = QuestionAnsweringClient(endpoint, credential)
+
+response = qa_client.get_answers(
+    question="What is Azure Language?",
+    project_name="product-faq",
+    deployment_name="production"
+)
+
+for answer in response.answers:
+    print(f"Answer: {answer.answer}")
+    print(f"Confidence: {answer.confidence}")
+```
+
+### Orchestration Workflow
+
+Connect multiple language models:
+
+- Route to CLU, Q&A, or LUIS
+- Combine different project types
+- Single endpoint for multiple models
+
+## Language Support
+
+Azure Language supports 100+ languages for various features:
+
+- **NER**: 20+ languages
+- **Sentiment Analysis**: 90+ languages
+- **Key Phrase Extraction**: 120+ languages
+- **Language Detection**: 120+ languages
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Customer Support">
+    - Analyze customer feedback sentiment
+    - Extract key issues from support tickets
+    - Build Q&A chatbots
+    - Summarize support conversations
+    - Detect PII in customer communications
+  </Accordion>
+  
+  <Accordion title="Content Analysis">
+    - Categorize articles and documents
+    - Extract key topics and themes
+    - Summarize long documents
+    - Detect language of content
+    - Link entities to knowledge bases
+  </Accordion>
+  
+  <Accordion title="Healthcare">
+    - Extract medical entities from notes
+    - Analyze clinical documentation
+    - Identify medications and conditions
+    - Support clinical decision systems
+    - Ensure PHI compliance
+  </Accordion>
+  
+  <Accordion title="Business Intelligence">
+    - Analyze survey responses
+    - Monitor brand sentiment
+    - Extract insights from feedback
+    - Categorize business documents
+    - Track customer satisfaction
+  </Accordion>
+</AccordionGroup>
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-ai-textanalytics
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Azure.AI.TextAnalytics
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    ```xml
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-textanalytics</artifactId>
+    </dependency>
+    ```
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure/ai-text-analytics
+    ```
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create an Azure Language resource in the Azure Portal
+  </Step>
+  
+  <Step title="Try Language Studio">
+    Test features with sample data at [language.cognitive.azure.com](https://language.cognitive.azure.com)
+  </Step>
+  
+  <Step title="Install SDK">
+    Install the Text Analytics SDK for your language
+  </Step>
+  
+  <Step title="Analyze Text">
+    Start extracting insights from your text data
+  </Step>
+</Steps>
+
+## Pricing
+
+- **Free Tier (F0)**: 5,000 text records per month
+- **Standard Tier (S)**: Pay per 1,000 text records
+- Custom models: Additional training and hosting costs
+- Different pricing for different features
+
+## Next Steps
+
+- [Try Language Studio](https://language.cognitive.azure.com/)
+- [View Quickstart Guide](https://learn.microsoft.com/azure/ai-services/language-service/quickstart)
+- [Explore Custom Models](https://learn.microsoft.com/azure/ai-services/language-service/custom-named-entity-recognition/overview)
+- [Learn about Question Answering](https://learn.microsoft.com/azure/ai-services/language-service/question-answering/overview)

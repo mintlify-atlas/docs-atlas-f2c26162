@@ -1,0 +1,318 @@
+---
+title: Bing COVID-19 Dataset
+description: Access daily updated COVID-19 data including confirmed, fatal, and recovered cases from all regions worldwide.
+---
+
+# Bing COVID-19 Dataset
+
+Bing COVID-19 data includes confirmed, fatal, and recovered cases from all regions, updated daily. The [Bing COVID-19 Tracker](https://bing.com/covid) reflects this data.
+
+## Data Sources
+
+Bing collects data from multiple trusted, reliable sources, including:
+
+- [BNO News](https://bnonews.com/index.php/2020/04/the-latest-coronavirus-cases/)
+- [Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/covid/index.html)
+- National/regional and state public health departments
+- [Wikipedia](https://en.wikipedia.org/wiki/2019%E2%80%9320_coronavirus_pandemic)
+- [World Health Organization (WHO)](https://www.who.int/emergencies/diseases/novel-coronavirus-2019)
+- [24/7 Wall St.](https://247wallst.com/)
+
+## Dataset Information
+
+### Available Formats
+
+Modified Bing COVID-19 datasets are available in multiple formats:
+
+- [CSV](https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.csv) (560.3 MB)
+- [JSON](https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.json) (1515.6 MB)
+- [JSON-Lines](https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.jsonl) (1506.2 MB)
+- [Parquet](https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.parquet) (55.4 MB)
+
+All modified datasets have ISO 3166 subdivision codes and load times added. They use lowercase column names with underscore separators.
+
+[CSV-format raw data](https://pandemicdatalake.blob.core.windows.net/public/raw/covid-19/bing_covid-19_data/latest/Bing-COVID19-Data.csv) is also available.
+
+### Data Volume
+
+- **Total Records**: 4,766,737+ rows (as of March 5, 2023)
+- **Update Frequency**: Daily
+- **Historical Data**: Earlier versions available on [GitHub](https://github.com/microsoft/Bing-COVID-19-Data/commits/)
+
+## Schema
+
+| Column Name | Data Type | Description | Example Values |
+|-------------|-----------|-------------|----------------|
+| `id` | int | Unique identifier | 742546, 69019298 |
+| `updated` | date | The as-of date for the record | 2021-04-23 |
+| `confirmed` | int | Confirmed case count for the region | 1, 2, 1000 |
+| `confirmed_change` | int | Change in confirmed cases from previous day | 1, 2, 50 |
+| `deaths` | int | Death case count for the region | 1, 2, 100 |
+| `deaths_change` | smallint | Change in deaths from previous day | 1, 2, 5 |
+| `recovered` | int | Recovered count for the region | 1, 2, 500 |
+| `recovered_change` | int | Change in recovered cases from previous day | 1, 2, 25 |
+| `country_region` | string | Country/region | United States, India |
+| `admin_region_1` | string | Region within country_region | Texas, Georgia |
+| `admin_region_2` | string | Region within admin_region_1 | Washington County |
+| `iso2` | string | 2-letter country code identifier | US, IN |
+| `iso3` | string | 3-letter country code identifier | USA, IND |
+| `iso_subdivision` | string | Two-part ISO subdivision code | US-TX, US-GA |
+| `latitude` | double | Latitude of the region centroid | 42.28708, 19.59852 |
+| `longitude` | double | Longitude of the region centroid | -2.5396, -155.5186 |
+| `load_time` | timestamp | Date and time file was loaded from source | 2021-04-26 00:06:34 |
+
+## Preview Data
+
+| id | updated | confirmed | deaths | country_region | admin_region_1 | confirmed_change | deaths_change |
+|----|---------|-----------|--------|----------------|----------------|------------------|---------------|
+| 338995 | 2020-01-21 | 262 | 0 | Worldwide | null | - | - |
+| 338996 | 2020-01-22 | 313 | 0 | Worldwide | null | 51 | 0 |
+| 338997 | 2020-01-23 | 578 | 0 | Worldwide | null | 265 | 0 |
+| 338998 | 2020-01-24 | 841 | 0 | Worldwide | null | 263 | 0 |
+| 338999 | 2020-01-25 | 1320 | 0 | Worldwide | null | 479 | 0 |
+| 339000 | 2020-01-26 | 2014 | 0 | Worldwide | null | 694 | 0 |
+| 339001 | 2020-01-27 | 2798 | 0 | Worldwide | null | 784 | 0 |
+| 339002 | 2020-01-28 | 4593 | 0 | Worldwide | null | 1795 | 0 |
+
+## Data Access
+
+### Python (Pandas Direct Access)
+
+Download and analyze the dataset using pandas:
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Read directly from Azure Blob Storage
+df = pd.read_parquet(
+    "https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.parquet"
+)
+
+print(df.head(10))
+print(df.dtypes)
+```
+
+### Analyze Worldwide Data
+
+```python
+# Filter worldwide data
+df_worldwide = df[df['country_region'] == 'Worldwide']
+
+# Create pivot table
+df_worldwide_pivot = df_worldwide.pivot_table(
+    df_worldwide, 
+    index=['country_region', 'updated']
+)
+
+print(df_worldwide_pivot)
+```
+
+### Visualize Trends
+
+```python
+# Plot confirmed cases over time
+df_worldwide.plot(
+    kind='line',
+    x='updated',
+    y='confirmed',
+    grid=True,
+    title='Worldwide Confirmed COVID-19 Cases'
+)
+
+# Plot deaths over time
+df_worldwide.plot(
+    kind='line',
+    x='updated',
+    y='deaths',
+    grid=True,
+    title='Worldwide COVID-19 Deaths'
+)
+
+# Plot daily change in confirmed cases
+df_worldwide.plot(
+    kind='line',
+    x='updated',
+    y='confirmed_change',
+    grid=True,
+    title='Daily Change in Confirmed Cases'
+)
+
+plt.show()
+```
+
+### Azure Databricks (PySpark)
+
+Access the dataset in Azure Databricks:
+
+```python
+# Azure storage access configuration
+blob_account_name = "pandemicdatalake"
+blob_container_name = "public"
+blob_relative_path = "curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.parquet"
+
+# Configure SPARK to read from Blob remotely
+wasbs_path = f"wasbs://{blob_container_name}@{blob_account_name}.blob.core.windows.net/{blob_relative_path}"
+print(f'Remote blob path: {wasbs_path}')
+
+# Read parquet file
+df = spark.read.parquet(wasbs_path)
+df.createOrReplaceTempView('covid_data')
+
+# Display top 10 rows
+print('Displaying top 10 rows:')
+display(spark.sql('SELECT * FROM covid_data LIMIT 10'))
+```
+
+### Azure Synapse Analytics
+
+```python
+# Azure storage access configuration
+blob_account_name = "pandemicdatalake"
+blob_container_name = "public"
+blob_relative_path = "curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.parquet"
+
+# Configure SPARK to read from Blob remotely
+wasbs_path = f"wasbs://{blob_container_name}@{blob_account_name}.blob.core.windows.net/{blob_relative_path}"
+print(f'Remote blob path: {wasbs_path}')
+
+# Read parquet file
+df = spark.read.parquet(wasbs_path)
+df.createOrReplaceTempView('source')
+
+# Display top 10 rows
+display(spark.sql('SELECT * FROM source LIMIT 10'))
+```
+
+## Analysis Examples
+
+### Query Specific Country Data
+
+```python
+import pandas as pd
+
+df = pd.read_parquet(
+    "https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/bing_covid-19_data/latest/bing_covid-19_data.parquet"
+)
+
+# Filter for a specific country
+us_data = df[df['country_region'] == 'United States']
+
+# Get latest data by state
+latest_date = us_data['updated'].max()
+latest_by_state = us_data[
+    us_data['updated'] == latest_date
+].groupby('admin_region_1').agg({
+    'confirmed': 'sum',
+    'deaths': 'sum',
+    'recovered': 'sum'
+}).sort_values('confirmed', ascending=False)
+
+print(f"\nTop 10 US States by Confirmed Cases (as of {latest_date}):")
+print(latest_by_state.head(10))
+```
+
+### Calculate Mortality Rate
+
+```python
+# Calculate mortality rate by country
+latest_global = df[df['updated'] == df['updated'].max()].copy()
+latest_global['mortality_rate'] = (
+    latest_global['deaths'] / latest_global['confirmed'] * 100
+).round(2)
+
+top_countries = latest_global[
+    latest_global['confirmed'] > 1000000
+].sort_values('mortality_rate', ascending=False)
+
+print("\nCountries with >1M cases - Mortality Rates:")
+print(top_countries[['country_region', 'confirmed', 'deaths', 'mortality_rate']].head(10))
+```
+
+### Time Series Analysis
+
+```python
+# Analyze 7-day moving average of new cases
+us_nationwide = df[
+    (df['country_region'] == 'United States') & 
+    (df['admin_region_1'].isna())
+].sort_values('updated')
+
+us_nationwide['7day_avg_cases'] = us_nationwide['confirmed_change'].rolling(window=7).mean()
+us_nationwide['7day_avg_deaths'] = us_nationwide['deaths_change'].rolling(window=7).mean()
+
+# Plot 7-day moving averages
+import matplotlib.pyplot as plt
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+ax1.plot(us_nationwide['updated'], us_nationwide['7day_avg_cases'])
+ax1.set_title('US COVID-19: 7-Day Moving Average of New Cases')
+ax1.set_ylabel('Cases')
+ax1.grid(True)
+
+ax2.plot(us_nationwide['updated'], us_nationwide['7day_avg_deaths'])
+ax2.set_title('US COVID-19: 7-Day Moving Average of Deaths')
+ax2.set_ylabel('Deaths')
+ax2.set_xlabel('Date')
+ax2.grid(True)
+
+plt.tight_layout()
+plt.show()
+```
+
+## License and Attribution
+
+The data is available strictly for educational and academic purposes under [these terms and conditions](https://github.com/microsoft/Bing-COVID-19-Data/blob/master/LICENSE.txt).
+
+### Valid Use Cases:
+- Academic institutions
+- Government agencies  
+- Medical research
+
+### Attribution Requirement:
+
+Data used or cited in publications should include an attribution to **"Bing COVID-19 Tracker"** with a link to [www.bing.com/covid](https://www.bing.com/covid).
+
+<Warning>
+This dataset is for educational and research purposes only. Always verify critical health information with official sources.
+</Warning>
+
+## Related Datasets
+
+<CardGroup cols={2}>
+  <Card title="COVID-19 Data Lake" icon="database">
+    Access additional COVID-19 datasets covering testing, hospital capacity, and mobility
+  </Card>
+  <Card title="ECDC COVID Cases" icon="chart-line">
+    European Centre for Disease Prevention and Control COVID-19 data
+  </Card>
+  <Card title="COVID Tracking Project" icon="notes-medical">
+    US state-level testing and outcome data
+  </Card>
+  <Card title="Oxford Government Response" icon="landmark">
+    Government policy responses to COVID-19
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create ML Dataset" icon="plus" href="/open-datasets/how-to/create-dataset">
+    Learn how to create Azure ML datasets from this data
+  </Card>
+  <Card title="Browse Catalog" icon="book" href="/open-datasets/catalog">
+    Explore other available datasets
+  </Card>
+  <Card title="Public Holidays" icon="calendar" href="/open-datasets/datasets/public-holidays">
+    View public holidays dataset
+  </Card>
+  <Card title="Genomics Data" icon="dna" href="/open-datasets/datasets/genomics">
+    Explore genomics datasets
+  </Card>
+</CardGroup>
+
+## Contact
+
+For questions or feedback about this or other datasets in the COVID-19 Data Lake, contact [askcovid19dl@microsoft.com](mailto:askcovid19dl@microsoft.com).

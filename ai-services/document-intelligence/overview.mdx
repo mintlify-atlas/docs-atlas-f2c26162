@@ -1,0 +1,423 @@
+---
+title: Document Intelligence Overview
+description: Machine learning-based OCR and document processing service for automated data extraction from forms and documents
+---
+
+# Document Intelligence
+
+Azure Document Intelligence is a cloud-based AI service for extracting information from documents using OCR and machine learning. Transform documents into intelligent data-driven solutions by automatically extracting text, tables, structure, and key-value pairs.
+
+## What is Document Intelligence?
+
+Document Intelligence uses machine-learning models to extract and analyze:
+- **Text**: Printed and handwritten content
+- **Structure**: Tables, sections, and layout
+- **Key-value pairs**: Form fields and their values
+- **Entities**: Specific data like dates, amounts, names
+
+## Core Capabilities
+
+<CardGroup cols={3}>
+  <Card title="Document Analysis" icon="file-lines">
+    Extract text, tables, and structure from any document
+  </Card>
+  
+  <Card title="Prebuilt Models" icon="box">
+    Ready-to-use models for invoices, receipts, IDs, and more
+  </Card>
+  
+  <Card title="Custom Models" icon="wand-magic-sparkles">
+    Train models for your specific document types
+  </Card>
+</CardGroup>
+
+## Document Analysis Models
+
+General-purpose models for extracting content from documents:
+
+### Read Model
+
+Extract text from documents:
+- Printed and handwritten text extraction
+- Multi-language support
+- High accuracy OCR
+- Text with position information
+- Searchable PDF output
+
+```python
+from azure.ai.formrecognizer import DocumentAnalysisClient
+from azure.core.credentials import AzureKeyCredential
+
+client = DocumentAnalysisClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<key>")
+)
+
+with open("document.pdf", "rb") as f:
+    poller = client.begin_analyze_document("prebuilt-read", f)
+    result = poller.result()
+
+for page in result.pages:
+    for line in page.lines:
+        print(f"Text: {line.content}")
+```
+
+### Layout Model
+
+Extract text, tables, and document structure:
+- Text extraction
+- Table detection and extraction
+- Section headers
+- Paragraphs and reading order
+- Selection marks (checkboxes)
+- Barcodes and QR codes
+
+```python
+poller = client.begin_analyze_document("prebuilt-layout", document)
+result = poller.result()
+
+# Extract tables
+for table in result.tables:
+    print(f"Table with {table.row_count} rows and {table.column_count} columns")
+    for cell in table.cells:
+        print(f"Cell [{cell.row_index},{cell.column_index}]: {cell.content}")
+```
+
+## Prebuilt Models
+
+Pre-trained models for common document types - no training required:
+
+### Financial Documents
+
+<Tabs>
+  <Tab title="Invoice">
+    Extract key information from invoices:
+    - Vendor details (name, address, tax ID)
+    - Customer information
+    - Invoice number and date
+    - Line items with quantities and amounts
+    - Subtotals and tax amounts
+    - Total amount due
+    
+    ```python
+    poller = client.begin_analyze_document("prebuilt-invoice", invoice)
+    result = poller.result()
+    
+    invoice = result.documents[0]
+    print(f"Vendor: {invoice.fields['VendorName'].value}")
+    print(f"Invoice Total: {invoice.fields['InvoiceTotal'].value}")
+    print(f"Due Date: {invoice.fields['DueDate'].value}")
+    ```
+  </Tab>
+  
+  <Tab title="Receipt">
+    Extract data from receipts:
+    - Merchant name and address
+    - Transaction date and time
+    - Items purchased
+    - Quantities and prices
+    - Subtotal, tax, tip
+    - Total amount
+    
+    ```python
+    poller = client.begin_analyze_document("prebuilt-receipt", receipt)
+    result = poller.result()
+    
+    receipt = result.documents[0]
+    print(f"Merchant: {receipt.fields['MerchantName'].value}")
+    print(f"Total: {receipt.fields['Total'].value}")
+    ```
+  </Tab>
+  
+  <Tab title="Bank Statement">
+    Extract information from bank statements:
+    - Account number and holder
+    - Statement period
+    - Beginning and ending balance
+    - Transaction details
+    - Deposits and withdrawals
+  </Tab>
+</Tabs>
+
+### Identity Documents
+
+<AccordionGroup>
+  <Accordion title="ID Cards and Passports">
+    Extract from driver's licenses, passports, and ID cards:
+    - First and last name
+    - Date of birth
+    - Document number
+    - Expiration date
+    - Address
+    - Country/region
+    - Machine readable zone (MRZ)
+    
+    **Supported Documents:**
+    - U.S. driver's licenses
+    - U.S. passports
+    - International passports
+    - National ID cards
+  </Accordion>
+  
+  <Accordion title="Health Insurance Card">
+    Extract from U.S. health insurance cards:
+    - Insurer name
+    - Member name and ID
+    - Group number
+    - Dependent information
+    - Prescription information
+    - Medicare/Medicaid ID
+  </Accordion>
+</AccordionGroup>
+
+### Tax Documents
+
+Prebuilt models for U.S. tax forms:
+
+- **W-2**: Wage and tax statement
+- **1098**: Mortgage interest statement
+- **1099**: Income forms (all variations)
+- **1040**: Individual tax return (all variations)
+- **Unified Tax Model**: Automatically detect and process any supported tax form
+
+```python
+# Use unified tax model to process any tax form
+poller = client.begin_analyze_document("prebuilt-tax.us", tax_form)
+result = poller.result()
+
+document = result.documents[0]
+print(f"Tax Form Type: {document.doc_type}")
+for field_name, field in document.fields.items():
+    print(f"{field_name}: {field.value}")
+```
+
+### Mortgage Documents
+
+Models for mortgage loan processing:
+
+- **1003 URLA**: Uniform Residential Loan Application
+- **1004 URAR**: Uniform Residential Appraisal Report
+- **1005**: Verification of Employment
+- **1008**: Uniform Underwriting and Transmittal Summary
+- **Closing Disclosure**: Final loan terms and costs
+
+## Custom Models
+
+Train models on your specific document types when prebuilt models don't fit:
+
+### Custom Template Model
+
+For structured documents with consistent layouts:
+- Fixed form templates
+- Consistent field positions
+- 5+ sample documents needed
+- Fast training time
+- High accuracy for fixed layouts
+
+```python
+from azure.ai.formrecognizer import DocumentModelAdministrationClient
+
+admin_client = DocumentModelAdministrationClient(endpoint, credential)
+
+# Train custom template model
+poller = admin_client.begin_build_document_model(
+    build_mode="template",
+    blob_container_url="<sas-url-to-training-data>",
+    model_id="my-custom-model"
+)
+
+model = poller.result()
+print(f"Model ID: {model.model_id}")
+```
+
+### Custom Neural Model
+
+For unstructured or varying layouts:
+- Variable document structures
+- Handwritten content
+- Mixed document types
+- 100+ sample documents recommended
+- Longer training time
+- Handles layout variations
+
+```python
+# Train custom neural model
+poller = admin_client.begin_build_document_model(
+    build_mode="neural",
+    blob_container_url="<sas-url-to-training-data>",
+    model_id="my-neural-model"
+)
+
+model = poller.result()
+```
+
+### Custom Classifier
+
+Classify documents into categories:
+- Identify document types
+- Route to appropriate model
+- Process mixed document batches
+- 5+ samples per class needed
+
+```python
+# Build custom classifier
+poller = admin_client.begin_build_document_classifier(
+    doc_types={
+        "invoice": training_files_invoices,
+        "receipt": training_files_receipts,
+        "contract": training_files_contracts
+    },
+    classifier_id="my-classifier"
+)
+
+classifier = poller.result()
+```
+
+### Composed Models
+
+Combine multiple custom models:
+- Group related document types
+- Single endpoint for multiple forms
+- Automatic model selection
+- Simplify API calls
+
+```python
+# Compose multiple models
+model_ids = ["model-1", "model-2", "model-3"]
+poller = admin_client.begin_compose_document_model(
+    model_ids,
+    model_id="composed-model"
+)
+
+composed = poller.result()
+```
+
+## Add-on Capabilities
+
+Optional features to enhance extraction:
+
+- **High Resolution Extraction**: Better accuracy for small text
+- **Formula Extraction**: Extract mathematical formulas
+- **Font Property Extraction**: Identify fonts and styling
+- **Barcode Extraction**: Read 1D and 2D barcodes
+- **Query Fields**: Extract specific information using natural language
+- **Key-Value Pairs**: Find form fields automatically
+
+```python
+# Use add-on capabilities
+poller = client.begin_analyze_document(
+    "prebuilt-layout",
+    document,
+    features=["FORMULAS", "BARCODES"]
+)
+```
+
+## Development Options
+
+<CardGroup cols={2}>
+  <Card title="Document Intelligence Studio" icon="window">
+    Web-based tool for testing and labeling documents
+  </Card>
+  
+  <Card title="REST API" icon="code">
+    Direct HTTP API access for any programming language
+  </Card>
+  
+  <Card title="Python SDK" icon="python">
+    ```bash
+    pip install azure-ai-formrecognizer
+    ```
+  </Card>
+  
+  <Card title="C# SDK" icon="c">
+    ```bash
+    dotnet add package Azure.AI.FormRecognizer
+    ```
+  </Card>
+  
+  <Card title="Java SDK" icon="java">
+    Maven dependency for Java applications
+  </Card>
+  
+  <Card title="JavaScript SDK" icon="js">
+    ```bash
+    npm install @azure/ai-form-recognizer
+    ```
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+### Accounts Payable
+- Automated invoice processing
+- Extract vendor and payment details
+- Integrate with accounting systems
+- Reduce manual data entry
+
+### Tax Processing
+- Extract data from tax forms
+- Automate tax return preparation
+- Process W-2s and 1099s
+- Verify tax document accuracy
+
+### Identity Verification
+- KYC compliance
+- Extract ID information
+- Verify identity documents
+- Automate onboarding
+
+### Mortgage Processing
+- Process loan applications
+- Extract appraisal data
+- Verify employment
+- Analyze closing documents
+
+## Input Requirements
+
+- **Formats**: PDF, JPEG, PNG, BMP, TIFF, HEIF
+- **File Size**: Up to 500 MB (2 GB for PDF)
+- **Pages**: Up to 2,000 pages
+- **Resolution**: 50 x 50 to 10,000 x 10,000 pixels
+
+## Region Availability
+
+Document Intelligence is available in these Azure regions:
+- East US
+- West US 2
+- West Europe
+- North Europe
+- And more regions
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create a Document Intelligence resource in Azure Portal
+  </Step>
+  
+  <Step title="Try Document Intelligence Studio">
+    Test prebuilt models with sample documents at [documentintelligence.ai.azure.com](https://documentintelligence.ai.azure.com)
+  </Step>
+  
+  <Step title="Install SDK">
+    Install the SDK for your programming language
+  </Step>
+  
+  <Step title="Analyze Documents">
+    Start extracting data from your documents
+  </Step>
+</Steps>
+
+## Pricing
+
+- **Free Tier (F0)**: 500 pages per month
+- **Standard Tier (S0)**: Pay per page analyzed
+- Custom model training: Additional charges
+- Storage: Required for training data
+
+## Next Steps
+
+- [Try Document Intelligence Studio](https://documentintelligence.ai.azure.com/)
+- [View Quickstart Guide](https://learn.microsoft.com/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api)
+- [Explore Prebuilt Models](https://learn.microsoft.com/azure/ai-services/document-intelligence/concept-model-overview)
+- [Train Custom Models](https://learn.microsoft.com/azure/ai-services/document-intelligence/concept-custom)

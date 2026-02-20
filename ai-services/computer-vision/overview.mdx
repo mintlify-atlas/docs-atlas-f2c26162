@@ -1,0 +1,350 @@
+---
+title: Computer Vision Overview
+description: Extract visual features from images including OCR, object detection, image analysis, and caption generation
+---
+
+# Computer Vision (Image Analysis)
+
+Azure Computer Vision provides AI algorithms for processing images and extracting visual information. The Image Analysis service uses pre-trained models to analyze images and return insights about visual features and characteristics.
+
+## Key Capabilities
+
+The Image Analysis API provides comprehensive image understanding features:
+
+<CardGroup cols={2}>
+  <Card title="OCR (Read Text)" icon="font">
+    Extract printed and handwritten text from images with high accuracy
+  </Card>
+  
+  <Card title="Object Detection" icon="square-check">
+    Detect and locate objects in images with bounding boxes and confidence scores
+  </Card>
+  
+  <Card title="Image Captioning" icon="message">
+    Generate human-readable descriptions of image content in complete sentences
+  </Card>
+  
+  <Card title="People Detection" icon="users">
+    Detect people in images and return bounding box coordinates for each person
+  </Card>
+  
+  <Card title="Visual Tagging" icon="tags">
+    Identify and tag thousands of recognizable objects, living things, scenery, and actions
+  </Card>
+  
+  <Card title="Smart Cropping" icon="crop">
+    Determine the area of interest in images to create optimal thumbnails
+  </Card>
+</CardGroup>
+
+## Image Analysis Features
+
+### Read Text from Images (OCR)
+
+Version 4.0 offers synchronous OCR capabilities that extract text from images:
+
+- Extract printed and handwritten text
+- Support for multiple languages
+- High accuracy text recognition
+- Faster performance than async Read API
+- Returns text with bounding box coordinates
+
+```python
+from azure.ai.vision.imageanalysis import ImageAnalysisClient
+from azure.core.credentials import AzureKeyCredential
+
+client = ImageAnalysisClient(
+    endpoint="https://<your-resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<your-key>")
+)
+
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["READ"]
+)
+
+for block in result.read.blocks:
+    for line in block.lines:
+        print(f"Text: {line.text}")
+```
+
+### Generate Image Captions
+
+Create human-readable descriptions of images:
+
+- **Simple captions**: One-sentence descriptions of the entire image
+- **Dense captions**: Detailed captions for individual objects with bounding boxes
+- Natural language descriptions
+- High accuracy based on image content
+
+```python
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["CAPTION"]
+)
+
+print(f"Caption: {result.caption.text}")
+print(f"Confidence: {result.caption.confidence}")
+```
+
+### Detect Objects
+
+Identify objects in images with bounding boxes:
+
+- Detect multiple instances of the same object
+- Return pixel coordinates for each object
+- Confidence scores for each detection
+- Support for thousands of object categories
+
+```python
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["OBJECTS"]
+)
+
+for obj in result.objects:
+    print(f"Object: {obj.tags[0].name}")
+    print(f"Confidence: {obj.tags[0].confidence}")
+    print(f"Bounding box: {obj.bounding_box}")
+```
+
+### People Detection
+
+Detect people appearing in images (v4.0 only):
+
+- Returns bounding box coordinates for each person
+- Confidence scores for each detection
+- Works with single or multiple people
+
+```python
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["PEOPLE"]
+)
+
+for person in result.people:
+    print(f"Person detected at: {person.bounding_box}")
+    print(f"Confidence: {person.confidence}")
+```
+
+### Tag Visual Features
+
+Identify and tag visual content:
+
+- Thousands of recognizable objects, living things, scenery, and actions
+- Tags with confidence scores
+- Context hints for ambiguous tags
+- Includes both main subjects and background elements
+
+```python
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["TAGS"]
+)
+
+for tag in result.tags:
+    print(f"{tag.name}: {tag.confidence}")
+```
+
+### Smart Cropping (Area of Interest)
+
+Find the optimal region of interest for thumbnails:
+
+- Analyzes image content to determine focus area
+- Returns bounding box coordinates
+- Supports custom aspect ratios
+- Preserves the most important visual elements
+
+```python
+result = client.analyze_from_url(
+    image_url="https://example.com/image.jpg",
+    visual_features=["SMART_CROPS"],
+    smart_crops_aspect_ratios=[0.9, 1.33]
+)
+
+for crop in result.smart_crops:
+    print(f"Crop box: {crop.bounding_box}")
+```
+
+## Additional Features (v3.2)
+
+Version 3.2 includes these additional capabilities:
+
+- **Brand Detection**: Identify commercial brands and logos
+- **Face Detection**: Detect faces and estimate age and gender
+- **Image Type Detection**: Determine if image is clip art or line drawing
+- **Color Scheme Detection**: Identify dominant and accent colors
+- **Adult Content Detection**: Detect adult, racy, or gory content
+- **Domain-Specific Models**: Detect celebrities and landmarks
+- **Image Categorization**: Categorize images using a taxonomy
+
+## Multimodal Embeddings
+
+Convert images and text to vector representations for semantic search:
+
+- Vectorize images for similarity search
+- Convert text queries to vectors
+- Match images to text based on semantic meaning
+- Support for 102 languages (multilingual model)
+- Build image search applications
+
+```python
+from azure.ai.vision.imageanalysis import VectorizeClient
+
+vectorize_client = VectorizeClient(
+    endpoint="https://<your-resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<your-key>")
+)
+
+# Vectorize an image
+image_vector = vectorize_client.vectorize_image(
+    image_url="https://example.com/image.jpg"
+)
+
+# Vectorize a text query
+text_vector = vectorize_client.vectorize_text(
+    text="a dog playing in the park"
+)
+```
+
+## API Versions
+
+### Version 4.0 (Recommended)
+
+- Synchronous OCR (Read)
+- People detection
+- Dense captions
+- Enhanced image captioning
+- Improved smart cropping
+- Multimodal embeddings
+
+### Version 3.2
+
+- Async OCR (Read API)
+- Brand detection
+- Face detection
+- Celebrity and landmark detection
+- All other v3.2 features
+
+## Input Requirements
+
+**Version 4.0:**
+- Supported formats: JPEG, PNG, GIF, BMP, WEBP, ICO, TIFF, MPO
+- File size: Less than 20 MB
+- Dimensions: 50 x 50 to 16,000 x 16,000 pixels
+
+**Version 3.2:**
+- Supported formats: JPEG, PNG, GIF, BMP
+- File size: Less than 4 MB
+- Dimensions: 50 x 50 to 16,000 x 16,000 pixels
+
+## Region Availability
+
+| Region | Analyze Image | Captions (v4.0) | Embeddings |
+|--------|---------------|-----------------|------------|
+| East US | ✓ | ✓ | ✓ |
+| West US | ✓ | ✓ | ✓ |
+| West US 2 | ✓ | | ✓ |
+| North Europe | ✓ | ✓ | ✓ |
+| West Europe | ✓ | ✓ | ✓ |
+| Southeast Asia | ✓ | ✓ | ✓ |
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Content Moderation">
+    - Detect inappropriate images
+    - Filter adult content
+    - Ensure brand safety
+    - Monitor user-generated content
+  </Accordion>
+  
+  <Accordion title="E-commerce">
+    - Generate product descriptions
+    - Tag products automatically
+    - Create smart thumbnails
+    - Enable visual search
+  </Accordion>
+  
+  <Accordion title="Accessibility">
+    - Generate alt text for images
+    - Read text aloud from images
+    - Describe visual content
+    - Support screen readers
+  </Accordion>
+  
+  <Accordion title="Document Processing">
+    - Extract text from scanned documents
+    - Digitize printed materials
+    - Process forms and receipts
+    - Archive historical documents
+  </Accordion>
+</AccordionGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Computer Vision Resource">
+    Create an Azure Computer Vision resource in the Azure Portal
+  </Step>
+  
+  <Step title="Get Credentials">
+    Retrieve your endpoint URL and API key from the resource
+  </Step>
+  
+  <Step title="Install SDK">
+    Install the Computer Vision SDK for your preferred language:
+    ```bash
+    pip install azure-ai-vision-imageanalysis
+    ```
+  </Step>
+  
+  <Step title="Analyze Images">
+    Use the SDK to analyze images and extract features
+  </Step>
+</Steps>
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-ai-vision-imageanalysis
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Azure.AI.Vision.ImageAnalysis
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    ```xml
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-vision-imageanalysis</artifactId>
+    </dependency>
+    ```
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure-rest/ai-vision-image-analysis
+    ```
+  </Card>
+</CardGroup>
+
+## Pricing
+
+- **Free Tier (F0)**: 5,000 transactions per month
+- **Standard Tier (S1)**: Pay per 1,000 transactions
+- Different pricing for v3.2 and v4.0 features
+- Additional costs for custom models
+
+## Next Steps
+
+- [Try Vision Studio](https://portal.vision.cognitive.azure.com/)
+- [View Image Analysis Quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library-40)
+- [Explore Code Samples](https://github.com/Azure-Samples/azure-ai-vision-sdk)
+- [Learn about Custom Vision](/ai-services/custom-vision/overview)

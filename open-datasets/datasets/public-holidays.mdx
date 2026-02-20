@@ -1,0 +1,301 @@
+---
+title: Public Holidays Dataset
+description: Access worldwide public holiday data covering 38 countries from 1970 to 2099 in Azure Open Datasets.
+---
+
+# Public Holidays Dataset
+
+Worldwide public holiday data sourced from PyPI holidays package and Wikipedia, covering 38 countries or regions from 1970 to 2099.
+
+Each row indicates the holiday info for a specific date, country or region, and whether most people have paid time off.
+
+## Dataset Details
+
+### Volume and Retention
+
+- **Format**: Parquet
+- **Size**: Approximately 500KB
+- **Date Range**: January 1, 1970 to January 1, 2099
+- **Records**: 20,665+ unique dates across 38 countries
+
+### Storage Location
+
+This dataset is stored in the **East US** Azure region. We recommend locating compute resources in East US for affinity.
+
+### Data Sources
+
+This dataset combines data from:
+- [Wikipedia](https://en.wikipedia.org/wiki/Category:Lists_of_public_holidays_by_country) (WikiMedia Foundation Inc)
+- [PyPI holidays package](https://pypi.org/project/holidays/)
+
+### License
+
+The combined dataset is provided under the [Creative Commons Attribution-ShareAlike 3.0 Unported License](https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License).
+
+## Schema
+
+| Column Name | Data Type | Description | Example Values |
+|-------------|-----------|-------------|----------------|
+| `countryOrRegion` | string | Country or region full name | Sweden, Norway |
+| `countryRegionCode` | string | Country or region code (ISO format) | SE, NO |
+| `date` | timestamp | Date of the holiday | 2025-12-25 00:00:00 |
+| `holidayName` | string | Full name of the holiday | Søndag, Christmas Day |
+| `isPaidTimeOff` | boolean | Whether most people have paid time off (available for US, GB, India only) | True, False, NULL |
+| `normalizeHolidayName` | string | Normalized name of the holiday | Christmas, New Year |
+
+<Note>
+The `isPaidTimeOff` column is only available for the United States, Great Britain, and India. For other countries, this field will be NULL.
+</Note>
+
+## Preview Data
+
+| countryOrRegion | holidayName | normalizeHolidayName | countryRegionCode | date |
+|----------------|-------------|----------------------|-------------------|------|
+| Norway | Søndag | Søndag | NO | 12/28/2098 |
+| Sweden | Söndag | Söndag | SE | 12/28/2098 |
+| Australia | Boxing Day | Boxing Day | AU | 12/26/2098 |
+| Hungary | Karácsony másnapja | Karácsony másnapja | HU | 12/26/2098 |
+| Austria | Stefanitag | Stefanitag | AT | 12/26/2098 |
+| Canada | Boxing Day | Boxing Day | CA | 12/26/2098 |
+| Croatia | Sveti Stjepan | Sveti Stjepan | HR | 12/26/2098 |
+| Czech | 2. svátek vánoční | 2. svátek vánoční | CZ | 12/26/2098 |
+
+## Data Access
+
+### Python SDK (azureml-opendatasets)
+
+Access the dataset using the Azure ML Open Datasets SDK:
+
+```python
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+# Get holidays from the last month
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_pandas_dataframe()
+
+# Display dataset info
+print(hol_df.info())
+print(hol_df.head())
+```
+
+### Azure Storage (Direct Access)
+
+Access the dataset directly from Azure Blob Storage:
+
+```python
+import pandas as pd
+import sys
+
+# Install required packages
+!{sys.executable} -m pip install azure-storage-blob pyarrow pandas
+
+from azure.storage.blob import BlobServiceClient, ContainerClient
+import os
+
+# Azure storage configuration
+azure_storage_account_name = "azureopendatastorage"
+container_name = "holidaydatacontainer"
+folder_name = "Processed"
+
+# Create blob service client
+container_url = f"https://{azure_storage_account_name}.blob.core.windows.net/"
+blob_service_client = BlobServiceClient(container_url)
+
+container_client = blob_service_client.get_container_client(container_name)
+blobs = container_client.list_blobs(folder_name)
+
+# Find the latest parquet file
+sorted_blobs = sorted(list(blobs), key=lambda e: e.name, reverse=True)
+for blob in sorted_blobs:
+    if blob.name.startswith(folder_name) and blob.name.endswith('.parquet'):
+        target_blob_name = blob.name
+        break
+
+print(f'Downloading: {target_blob_name}')
+
+# Download and read the parquet file
+_, filename = os.path.split(target_blob_name)
+blob_client = container_client.get_blob_client(target_blob_name)
+with open(filename, 'wb') as local_file:
+    blob_client.download_blob().readinto(local_file)
+
+# Read into pandas DataFrame
+df = pd.read_parquet(filename)
+print(df.head())
+```
+
+### Azure Databricks (Python SDK)
+
+```python
+# Install in Databricks cluster first:
+# pip install azureml-opendatasets
+
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_spark_dataframe()
+
+display(hol_df.limit(5))
+```
+
+### Azure Databricks (PySpark)
+
+```python
+# Azure storage access configuration
+blob_account_name = "azureopendatastorage"
+blob_container_name = "holidaydatacontainer"
+blob_relative_path = "Processed"
+
+# Configure SPARK to read from Blob storage
+wasbs_path = f"wasbs://{blob_container_name}@{blob_account_name}.blob.core.windows.net/{blob_relative_path}"
+print(f'Remote blob path: {wasbs_path}')
+
+# Read parquet files
+df = spark.read.parquet(wasbs_path)
+print('Register the DataFrame as a SQL temporary view: source')
+df.createOrReplaceTempView('source')
+
+# Display top 10 rows
+print('Displaying top 10 rows:')
+display(spark.sql('SELECT * FROM source LIMIT 10'))
+```
+
+### Azure Synapse Analytics
+
+```python
+# Using azureml-opendatasets in Synapse
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+end_date = datetime.today()
+start_date = datetime.today() - relativedelta(months=1)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_spark_dataframe()
+
+# Display top 5 rows
+display(hol_df.limit(5))
+```
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Demand Forecasting">
+    Incorporate holiday information into demand forecasting models to account for seasonal variations and holiday effects on consumer behavior.
+  </Accordion>
+
+  <Accordion title="Resource Planning">
+    Plan staffing and resource allocation around public holidays across different countries for global operations.
+  </Accordion>
+
+  <Accordion title="Calendar Applications">
+    Build calendar applications that display public holidays for multiple countries and regions.
+  </Accordion>
+
+  <Accordion title="Business Intelligence">
+    Analyze business metrics with holiday context to understand performance patterns during holiday periods.
+  </Accordion>
+
+  <Accordion title="Travel Planning">
+    Help travelers and tourism applications identify public holidays in destination countries.
+  </Accordion>
+</AccordionGroup>
+
+## Example Analysis
+
+### Count Holidays by Country
+
+```python
+import pandas as pd
+from azureml.opendatasets import PublicHolidays
+from datetime import datetime
+
+# Get holidays for 2024
+start_date = datetime(2024, 1, 1)
+end_date = datetime(2024, 12, 31)
+
+hol = PublicHolidays(start_date=start_date, end_date=end_date)
+hol_df = hol.to_pandas_dataframe()
+
+# Count holidays by country
+holiday_counts = hol_df.groupby('countryOrRegion')['holidayName'].count().sort_values(ascending=False)
+print("\nTop 10 countries by number of holidays:")
+print(holiday_counts.head(10))
+```
+
+### Find Holidays on Specific Date
+
+```python
+# Find all countries with holidays on December 25, 2024
+christmas_date = pd.Timestamp('2024-12-25')
+christmas_holidays = hol_df[hol_df['date'] == christmas_date]
+
+print(f"\nCountries celebrating holidays on {christmas_date.date()}:")
+print(christmas_holidays[['countryOrRegion', 'holidayName']].to_string(index=False))
+```
+
+### Filter Paid Time Off Holidays
+
+```python
+# Get only holidays with paid time off in the US
+us_paid_holidays = hol_df[
+    (hol_df['countryRegionCode'] == 'US') & 
+    (hol_df['isPaidTimeOff'] == True)
+]
+
+print("\nUS Federal Holidays with Paid Time Off:")
+print(us_paid_holidays[['date', 'holidayName']].to_string(index=False))
+```
+
+## Supported Countries
+
+The dataset covers 38 countries and regions including:
+
+- Australia, Austria, Canada, Croatia, Czech Republic
+- Denmark, Finland, France, Germany, Hungary
+- India, Ireland, Italy, Japan, Mexico
+- Netherlands, New Zealand, Norway, Poland, Portugal
+- Spain, Sweden, Switzerland, United Kingdom, United States
+- And more...
+
+## Data Quality Notes
+
+<Warning>
+The `isPaidTimeOff` field is only populated for the United States, Great Britain, and India. For all other countries, this field will be NULL.
+</Warning>
+
+<Info>
+Holiday names are provided in the local language of each country. Use the `normalizeHolidayName` field for a more standardized representation where available.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create ML Dataset" icon="plus" href="/open-datasets/how-to/create-dataset">
+    Learn how to create Azure ML datasets from this data
+  </Card>
+  <Card title="Browse Catalog" icon="book" href="/open-datasets/catalog">
+    Explore other available datasets
+  </Card>
+  <Card title="COVID-19 Data" icon="virus" href="/open-datasets/datasets/covid-19">
+    View COVID-19 tracking datasets
+  </Card>
+  <Card title="Genomics Data" icon="dna" href="/open-datasets/datasets/genomics">
+    Explore genomics datasets
+  </Card>
+</CardGroup>
+
+## Contact
+
+For questions about this dataset, email [aod@microsoft.com](mailto:aod@microsoft.com).

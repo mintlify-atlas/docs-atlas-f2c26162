@@ -1,0 +1,468 @@
+---
+title: Tool Concepts
+description: Learn about tools in Microsoft Foundry that extend agent capabilities for knowledge retrieval, code execution, and external integrations.
+---
+
+# Understanding Agent Tools
+
+Tools extend agent capabilities by enabling them to retrieve knowledge, execute code, call external APIs, and interact with enterprise systems. This guide explains tool concepts and how to use them effectively.
+
+## What Are Tools?
+
+Tools are capabilities that agents can invoke during execution to:
+- **Retrieve knowledge** from documents, databases, and APIs
+- **Execute code** in sandboxed environments
+- **Call functions** defined by your application
+- **Search data** using Azure AI Search or Bing
+- **Integrate systems** via Azure Functions or Logic Apps
+
+Tools transform agents from conversational interfaces into action-taking systems.
+
+## Built-In Tools
+
+Microsoft Foundry provides several built-in tools that work out of the box:
+
+### Code Interpreter
+
+**Capability**: Execute Python code in a sandboxed environment
+
+**Use cases**:
+- Mathematical calculations and data analysis
+- Generate charts and visualizations
+- Process CSV and data files
+- Perform iterative problem-solving
+
+**Example**:
+```python
+from azure.ai.projects.models import CodeInterpreterTool
+
+code_interpreter = CodeInterpreterTool()
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="data-analyst",
+    instructions="You can analyze data and create visualizations.",
+    tools=code_interpreter.definitions,
+    tool_resources=code_interpreter.resources,
+)
+```
+
+**Features**:
+- Automatic retry on code failures
+- Support for popular Python libraries
+- File upload and download
+- Session persistence (1 hour default, 30 min idle timeout)
+
+<Warning>
+Code Interpreter has additional charges beyond token-based fees. Each concurrent session is billed separately.
+</Warning>
+
+### File Search
+
+**Capability**: Retrieve information from uploaded documents
+
+**Use cases**:
+- Knowledge base queries
+- Document Q&A
+- Product information retrieval
+- Internal documentation search
+
+**Example**:
+```python
+from azure.ai.projects.models import FileSearchTool, FilePurpose
+
+# Upload file
+file = project.agents.files.upload_and_poll(
+    file_path="product_catalog.pdf",
+    purpose=FilePurpose.AGENTS
+)
+
+# Create file search tool
+file_search = FileSearchTool(file_ids=[file.id])
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="product-expert",
+    instructions="Answer questions about products using uploaded files.",
+    tools=file_search.definitions,
+    tool_resources=file_search.resources,
+)
+```
+
+**How it works**:
+1. Automatically parses and chunks documents
+2. Generates and stores embeddings
+3. Performs hybrid (vector + keyword) search
+4. Reranks results for relevance
+5. Injects top results into context
+
+**Supported formats**:
+- Documents: PDF, DOCX, TXT, MD
+- Code: PY, JS, JAVA, CPP, etc.
+- Data: CSV, JSON, XML
+- Images: JPG, PNG, GIF (with vision models)
+
+### Azure AI Search
+
+**Capability**: Search custom indexes with full control
+
+**Use cases**:
+- Enterprise knowledge bases
+- Custom vector search
+- Semantic search
+- Hybrid search strategies
+
+**Example**:
+```python
+from azure.ai.projects.models import AzureAISearchTool
+
+search_tool = AzureAISearchTool(
+    connection_id="<connection-id>",
+    index_name="products-index"
+)
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="search-agent",
+    instructions="Search the products index to answer questions.",
+    tools=search_tool.definitions,
+    tool_resources=search_tool.resources,
+)
+```
+
+**Search types**:
+- **Vector search**: Semantic similarity
+- **Keyword search**: Exact matches
+- **Hybrid search**: Combined vector + keyword
+- **Semantic search**: AI-enhanced ranking
+
+## Custom Tools
+
+### Function Calling
+
+**Capability**: Define custom functions for agents to call
+
+**Use cases**:
+- Call internal APIs
+- Query databases
+- Trigger workflows
+- Integrate business logic
+
+**Example**:
+```python
+from azure.ai.projects.models import FunctionTool
+import json
+
+def get_order_status(order_id: str) -> str:
+    """
+    Get the status of a customer order.
+    
+    :param order_id: The order ID to look up
+    :return: Order status as JSON string
+    """
+    # Call your API or database
+    status = fetch_order_from_db(order_id)
+    return json.dumps({"order_id": order_id, "status": status})
+
+# Register function
+function_tool = FunctionTool(functions={get_order_status})
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="order-assistant",
+    instructions="Help customers check their order status.",
+    tools=function_tool.definitions,
+)
+
+# Handle function calls
+run = project.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
+
+while run.status in ["queued", "in_progress", "requires_action"]:
+    if run.status == "requires_action":
+        tool_outputs = []
+        for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+            if tool_call.function.name == "get_order_status":
+                args = json.loads(tool_call.function.arguments)
+                output = get_order_status(args["order_id"])
+                tool_outputs.append({
+                    "tool_call_id": tool_call.id,
+                    "output": output
+                })
+        
+        # Submit results
+        project.agents.runs.submit_tool_outputs(
+            thread_id=thread.id,
+            run_id=run.id,
+            tool_outputs=tool_outputs
+        )
+    
+    run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+```
+
+**Best practices**:
+- Provide clear function descriptions
+- Define parameter schemas explicitly
+- Validate function inputs
+- Handle errors gracefully
+- Return structured JSON
+
+### Azure Functions
+
+**Capability**: Execute code in Azure Functions
+
+**Use cases**:
+- Long-running operations
+- Complex business logic
+- Database operations
+- Third-party API integrations
+
+**Integration methods**:
+
+<Tabs>
+  <Tab title="Queue-based">
+    Asynchronous processing via Azure Queue Storage:
+    
+    ```python
+    from azure.ai.projects.models import AzureFunctionTool
+    
+    function_tool = AzureFunctionTool(
+        name="process_order",
+        description="Process a customer order",
+        input_binding={
+            "storage_queue": "order-queue"
+        },
+        output_binding={
+            "storage_queue": "order-results"
+        }
+    )
+    ```
+  </Tab>
+  
+  <Tab title="HTTP-based">
+    Synchronous calls via HTTP triggers:
+    
+    ```python
+    # Use OpenAPI tool to describe HTTP function
+    from azure.ai.projects.models import OpenAPITool
+    
+    openapi_tool = OpenAPITool(
+        name="process_order",
+        spec_url="https://my-functions.azurewebsites.net/api/openapi"
+    )
+    ```
+  </Tab>
+  
+  <Tab title="MCP Server">
+    Model Context Protocol for reusable tools:
+    
+    ```python
+    # Function app acts as MCP server
+    # Multiple agents can connect to the same tool catalog
+    ```
+  </Tab>
+</Tabs>
+
+## Tool Design Patterns
+
+### Sequential Tool Use
+
+Agent calls tools one after another:
+
+```
+User: "What's the weather in my favorite city?"
+
+1. Call getUserFavoriteCity() -> "Seattle"
+2. Call getWeather("Seattle") -> "Sunny, 72°F"
+3. Generate response: "It's sunny and 72°F in Seattle"
+```
+
+### Parallel Tool Use
+
+Agent calls multiple tools simultaneously:
+
+```
+User: "Compare products A and B"
+
+1. Call getProduct("A") | getProduct("B") [parallel]
+2. Generate comparison based on results
+```
+
+### Conditional Tool Use
+
+Agent decides which tool to use based on context:
+
+```
+User: "I need help with my order"
+
+1. Analyze request type
+2. If status inquiry -> call getOrderStatus()
+3. If cancellation -> call cancelOrder()
+4. If modification -> call modifyOrder()
+```
+
+### Hierarchical Tool Use
+
+Tools that call other tools:
+
+```
+User: "Prepare a report on Q4 sales"
+
+1. Call generateReport() which internally:
+   - Calls fetchSalesData()
+   - Calls analyzeData()
+   - Calls createVisualization()
+2. Return complete report
+```
+
+## Tool Execution Flow
+
+<Steps>
+  <Step title="Agent Determines Tool Need">
+    Model analyzes user request and identifies required tools
+  </Step>
+  
+  <Step title="Run Status Changes">
+    Run status changes to `requires_action` with tool call details
+  </Step>
+  
+  <Step title="Application Executes Tool">
+    Your code executes the actual function or API call
+  </Step>
+  
+  <Step title="Submit Tool Outputs">
+    Application submits results back to the agent
+  </Step>
+  
+  <Step title="Agent Processes Results">
+    Model incorporates tool outputs into response
+  </Step>
+  
+  <Step title="Generate Response">
+    Agent returns final answer to user
+  </Step>
+</Steps>
+
+## Tool Considerations
+
+### Performance
+
+- **Latency**: Tool calls add execution time
+- **Timeouts**: Runs expire after 10 minutes
+- **Retries**: Implement retry logic for failures
+- **Caching**: Cache frequently accessed data
+
+### Security
+
+- **Authentication**: Use managed identities
+- **Authorization**: Implement proper access controls
+- **Input validation**: Sanitize all inputs
+- **Output filtering**: Apply content safety checks
+
+### Cost
+
+- **Token usage**: Tool outputs consume context tokens
+- **API calls**: External API costs
+- **Storage**: File storage for Code Interpreter and File Search
+- **Compute**: Azure Functions execution time
+
+### Reliability
+
+- **Error handling**: Graceful failure modes
+- **Fallbacks**: Alternative approaches when tools fail
+- **Monitoring**: Track tool invocation success rates
+- **Logging**: Comprehensive execution logs
+
+## Tool Best Practices
+
+<Accordion title="Write Clear Tool Descriptions">
+The model uses your tool descriptions to decide when to call them:
+
+```python
+def get_weather(location: str, unit: str = "fahrenheit") -> str:
+    """
+    Get current weather for a specific location.
+    
+    Use this tool when the user asks about weather conditions,
+    temperature, or forecast for a particular city or location.
+    
+    :param location: City and state/country (e.g., "Seattle, WA")
+    :param unit: Temperature unit - "fahrenheit" or "celsius"
+    :return: Current weather conditions as JSON
+    """
+```
+</Accordion>
+
+<Accordion title="Define Clear Parameters">
+Use JSON Schema to define expected inputs:
+
+```python
+{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "City and state, e.g. Seattle, WA"
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["fahrenheit", "celsius"]
+                }
+            },
+            "required": ["location"]
+        }
+    }
+}
+```
+</Accordion>
+
+<Accordion title="Return Structured Data">
+Return JSON for better model understanding:
+
+```python
+def get_weather(location: str) -> str:
+    return json.dumps({
+        "location": location,
+        "temperature": 72,
+        "conditions": "sunny",
+        "humidity": 45,
+        "wind_speed": 8
+    })
+```
+</Accordion>
+
+<Accordion title="Handle Errors Gracefully">
+Provide helpful error messages:
+
+```python
+try:
+    result = call_external_api()
+    return json.dumps({"success": True, "data": result})
+except Exception as e:
+    return json.dumps({
+        "success": False,
+        "error": "Unable to fetch data. Please try again."
+    })
+```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Code Interpreter" icon="code" href="/foundry/agents/tools/code-interpreter">
+    Execute Python code in agents
+  </Card>
+  <Card title="File Search" icon="file-magnifying-glass" href="/foundry/agents/tools/file-search">
+    Retrieve knowledge from documents
+  </Card>
+  <Card title="Function Calling" icon="function" href="/foundry/agents/tools/function-calling">
+    Define custom agent tools
+  </Card>
+  <Card title="Azure AI Search" icon="magnifying-glass" href="/foundry/agents/tools/azure-ai-search">
+    Search custom indexes
+  </Card>
+</CardGroup>

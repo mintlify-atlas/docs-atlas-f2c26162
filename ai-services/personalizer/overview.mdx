@@ -1,0 +1,369 @@
+---
+title: Personalizer Overview
+description: Reinforcement learning service for personalized content recommendations based on user behavior and context
+---
+
+# Personalizer
+
+<Warning>
+  Personalizer has been retired. The service is no longer available for new projects. Existing applications should migrate to alternative solutions.
+</Warning>
+
+Azure AI Personalizer was a reinforcement learning service that helped applications choose the best content or actions to show users based on their real-time behavior and context. The service learned from user feedback to optimize recommendations over time.
+
+## What Was Personalizer?
+
+Personalizer used reinforcement learning to:
+- **Rank actions**: Determine the best action for a given context
+- **Learn from feedback**: Improve decisions based on rewards
+- **Personalize at scale**: Optimize for all users collectively
+- **Adapt in real-time**: Update models continuously
+
+<Note>
+  This documentation is provided for historical reference and migration planning only.
+</Note>
+
+## How It Worked
+
+Personalizer used two primary APIs:
+
+### Rank API
+
+Determine the best action for current context:
+
+```python
+from azure.cognitiveservices.personalizer import PersonalizerClient
+from azure.cognitiveservices.personalizer.models import RankRequest
+
+client = PersonalizerClient(endpoint, credentials)
+
+# Define actions (content options)
+actions = [
+    {"id": "article1", "features": [{"topic": "tech", "length": "short"}]},
+    {"id": "article2", "features": [{"topic": "sports", "length": "long"}]},
+    {"id": "article3", "features": [{"topic": "news", "length": "medium"}]}
+]
+
+# Define context (user and situation)
+context = [
+    {"user": {"location": "US", "device": "mobile"}},
+    {"time": {"dayOfWeek": "Monday", "hour": 14}}
+]
+
+# Get ranking
+rank_request = RankRequest(
+    actions=actions,
+    context_features=context,
+    event_id="unique-event-id"
+)
+
+response = client.rank(rank_request)
+
+# Use top-ranked action
+top_action = response.ranking[0]
+print(f"Show content: {top_action.id}")
+print(f"Probability: {top_action.probability}")
+```
+
+### Reward API
+
+Provide feedback on the recommendation:
+
+```python
+# User clicked on the article (positive outcome)
+client.events.reward(
+    event_id="unique-event-id",
+    value=1.0  # Reward score: 0 (bad) to 1 (good)
+)
+
+# User ignored the article (negative outcome)
+client.events.reward(
+    event_id="unique-event-id",
+    value=0.0
+)
+
+# Partial reward for incomplete action
+client.events.reward(
+    event_id="unique-event-id",
+    value=0.5
+)
+```
+
+## Key Concepts
+
+### Actions
+
+Content items or choices to rank:
+
+- **ID**: Unique identifier for the action
+- **Features**: Characteristics describing the action
+- **Example**: Articles, products, ads, recommendations
+
+```json
+{
+  "id": "product-123",
+  "features": [
+    {"category": "electronics", "price": "high", "brand": "premium"}
+  ]
+}
+```
+
+### Context
+
+Information about the current situation:
+
+- **User features**: Demographics, preferences, history
+- **Environment features**: Time, device, location
+- **Session features**: Page type, previous actions
+
+```json
+[
+  {"user": {"age": "25-34", "interests": ["tech", "gaming"]}},
+  {"device": {"type": "mobile", "os": "iOS"}},
+  {"time": {"hour": 20, "dayOfWeek": "Friday"}}
+]
+```
+
+### Rewards
+
+Feedback indicating outcome quality:
+
+- **Range**: 0 (worst) to 1 (best)
+- **Timing**: Real-time or delayed
+- **Meaning**: Defined by your business objectives
+
+**Example Reward Logic:**
+
+| User Behavior | Reward Score | Reasoning |
+|---------------|--------------|----------|
+| Clicked and purchased | 1.0 | Best outcome |
+| Clicked, viewed 90%+ | 0.8 | Strong engagement |
+| Clicked, viewed 30%+ | 0.5 | Moderate interest |
+| Clicked, bounced quickly | 0.2 | Poor match |
+| Did not click | 0.0 | Not relevant |
+
+## Learning Modes
+
+### Apprentice Mode
+
+Safe training mode for new models:
+
+- Learn from your existing logic
+- No impact on user experience
+- Validate features and configuration
+- Returns your baseline action
+- Build confidence before going live
+
+```python
+# In Apprentice mode, baseline action is returned
+rank_request = RankRequest(
+    actions=actions,
+    context_features=context,
+    baseline_action="default-content"  # Your current logic
+)
+```
+
+### Online Mode
+
+Production mode with active learning:
+
+- Returns best predicted action
+- Explores alternative actions
+- Learns from all feedback
+- Continuously improves
+- Optimizes for reward maximization
+
+## Use Cases
+
+Personalizer was used for:
+
+### Content Personalization
+
+- News article recommendations
+- Video suggestions
+- Product recommendations
+- Ad placement optimization
+- Email content selection
+
+### User Experience
+
+- Homepage layout personalization
+- Feature highlighting
+- Navigation customization
+- Search result ranking
+- Notification timing
+
+### E-commerce
+
+- Product recommendations
+- Promotional offers
+- Pricing strategies
+- Bundle suggestions
+- Upsell opportunities
+
+### Communication
+
+- Push notification timing
+- Email subject lines
+- Message content selection
+- Communication channel choice
+
+## Features and Configuration
+
+### Feature Engineering
+
+Design effective features:
+
+- **Categorical**: Device type, location, category
+- **Numerical**: Price, rating, popularity
+- **Boolean**: Is premium, has discount, in stock
+- **Text**: Tags, keywords (as categorical)
+
+**Best Practices:**
+
+- Use 5-50 features per action/context
+- Include diverse feature types
+- Avoid highly correlated features
+- Update features as they change
+- Test feature importance
+
+### Model Configuration
+
+- **Update frequency**: How often model trains
+- **Exploration percentage**: Random action probability
+- **Reward wait time**: Delay for reward signal
+- **Default reward**: Reward when none provided
+
+### Evaluation
+
+- **Offline evaluation**: Compare strategies on historical data
+- **Online evaluation**: A/B test in production
+- **Counterfactual evaluation**: Estimate alternative policies
+
+## Migration Alternatives
+
+With Personalizer retired, consider:
+
+### Azure AI Solutions
+
+- **Azure OpenAI**: For LLM-based recommendations
+- **Azure Machine Learning**: Custom recommendation models
+- **Azure Applied AI**: Pre-built AI solutions
+
+### Recommendation Systems
+
+- **Collaborative filtering**: User-item matrix factorization
+- **Content-based filtering**: Feature-based matching
+- **Hybrid approaches**: Combine multiple techniques
+
+### Third-Party Services
+
+- Amazon Personalize
+- Google Recommendations AI
+- Algolia Recommend
+- Custom ML solutions
+
+## Best Practices (Historical)
+
+For reference, best practices included:
+
+### Data Requirements
+
+- Minimum 1,000 events per day for learning
+- Consistent feature schema
+- Quality reward signals
+- Sufficient action variety (50 max recommended)
+
+### Feature Design
+
+- Use relevant, non-redundant features
+- Include both action and context features
+- Update features when they change
+- Test feature importance with evaluations
+
+### Reward Function
+
+- Align with business objectives
+- Provide timely feedback
+- Use consistent scale (0-1)
+- Consider delayed rewards for complex goals
+
+### Testing
+
+- Start in Apprentice mode
+- Run offline evaluations
+- A/B test before full deployment
+- Monitor metrics continuously
+
+## SDK Support (Historical)
+
+Personalizer supported:
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-cognitiveservices-personalizer
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Microsoft.Azure.CognitiveServices.Personalizer
+    ```
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure/cognitiveservices-personalizer
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    Maven package available
+  </Card>
+</CardGroup>
+
+## Migration Guidance
+
+<Steps>
+  <Step title="Assess Current Usage">
+    Document your Personalizer implementation, features, and metrics
+  </Step>
+  
+  <Step title="Evaluate Alternatives">
+    Research replacement solutions based on your requirements
+  </Step>
+  
+  <Step title="Export Data">
+    Save historical event and model data before decommissioning
+  </Step>
+  
+  <Step title="Implement New Solution">
+    Build and test replacement recommendation system
+  </Step>
+  
+  <Step title="Migrate Traffic">
+    Gradually transition users to new system
+  </Step>
+  
+  <Step title="Decommission">
+    Remove Personalizer integration after validation
+  </Step>
+</Steps>
+
+## Resources
+
+- [Retirement Announcement](https://azure.microsoft.com/updates/personalizer-retirement/)
+- [Historical Documentation](https://learn.microsoft.com/azure/ai-services/personalizer/)
+- [Code Samples](https://github.com/Azure-Samples/cognitive-services-personalizer-samples)
+- [Migration Guide](https://learn.microsoft.com/azure/ai-services/personalizer/migration-guide)
+
+## Support
+
+For existing Personalizer implementations:
+
+- Review retirement timeline and deadlines
+- Plan migration strategy
+- Export critical data
+- Implement alternative solutions
+- Contact Azure support for migration assistance

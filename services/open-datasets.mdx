@@ -1,0 +1,605 @@
+---
+title: Azure Open Datasets Overview
+description: Curated public datasets optimized for machine learning, including weather, census, transportation, and economic data.
+---
+
+# Azure Open Datasets
+
+Azure Open Datasets are curated public datasets that you can add scenario-specific features to machine learning solutions for more accurate models. Open Datasets are available in the cloud on Microsoft Azure, integrated into Azure Machine Learning, and readily available to Azure Databricks.
+
+<CardGroup cols={2}>
+  <Card title="Pre-Processed Data" icon="check-circle">
+    Cleaned and structured datasets ready for ML workflows
+  </Card>
+  
+  <Card title="Regular Updates" icon="rotate">
+    Automatically refreshed from authoritative sources
+  </Card>
+  
+  <Card title="Azure Integration" icon="link">
+    Native support in Azure ML and Databricks
+  </Card>
+  
+  <Card title="Free Access" icon="dollar-sign">
+    No cost to access and use datasets
+  </Card>
+</CardGroup>
+
+## What are Azure Open Datasets?
+
+Open Datasets are curated public datasets optimized for consumption in machine learning workflows. Datasets include public-domain data for weather, census, holidays, public safety, and location that help you train machine learning models and enrich predictive solutions.
+
+<Note>
+  **Key Benefit**: Data scientists often spend most of their time cleaning and preparing data. Azure Open Datasets are already preprocessed and optimized, saving significant time.
+</Note>
+
+## Available Dataset Categories
+
+### Transportation
+
+Real-world transportation data for demand forecasting and logistics:
+
+<Accordion title="NYC Taxi - Yellow Cab">
+  Yellow taxi trip records from New York City Taxi & Limousine Commission.
+  
+  **Data Includes:**
+  - Pick-up and drop-off dates/times
+  - Pick-up and drop-off locations (latitude/longitude)
+  - Trip distances
+  - Itemized fares
+  - Rate types
+  - Payment types
+  - Driver-reported passenger counts
+  
+  **Use Cases:**
+  - Demand forecasting
+  - Route optimization
+  - Pricing models
+  - Urban planning analysis
+  
+  ```python
+  from azureml.opendatasets import NycTlcYellow
+  from datetime import datetime
+  
+  # Load data for specific period
+  start_date = datetime(2023, 1, 1)
+  end_date = datetime(2023, 1, 31)
+  
+  yellow_taxi = NycTlcYellow(start_date, end_date)
+  df = yellow_taxi.to_pandas_dataframe()
+  
+  print(f"Loaded {len(df)} taxi trips")
+  print(df.head())
+  ```
+</Accordion>
+
+<Accordion title="NYC Taxi - Green Cab">
+  Green taxi trip records serving areas not covered by yellow cabs.
+  
+  **Data Includes:**
+  - Similar structure to yellow cab data
+  - Focus on outer boroughs
+  - Trip and fare details
+  - Payment information
+  
+  **Use Cases:**
+  - Underserved area analysis
+  - Multi-modal transportation planning
+  - Fare comparison studies
+  
+  ```python
+  from azureml.opendatasets import NycTlcGreen
+  
+  green_taxi = NycTlcGreen(start_date, end_date)
+  df = green_taxi.to_pandas_dataframe()
+  ```
+</Accordion>
+
+### Labor and Economics
+
+Economic indicators and labor statistics:
+
+<Accordion title="US Labor Force Statistics">
+  Comprehensive labor force data from the Bureau of Labor Statistics.
+  
+  **Data Includes:**
+  - Labor force participation rates
+  - Employment/unemployment rates
+  - Demographics (age, gender, race, ethnicity)
+  - Civilian noninstitutional population
+  - Seasonal adjustments
+  
+  **Use Cases:**
+  - Economic forecasting
+  - Workforce planning
+  - Regional analysis
+  - Demographic trends
+  
+  ```python
+  from azureml.opendatasets import UsLaborForce
+  
+  labor_force = UsLaborForce()
+  df = labor_force.to_pandas_dataframe()
+  
+  # Filter for specific demographics
+  women_data = df[df['gender'] == 'Women']
+  print(women_data.head())
+  ```
+</Accordion>
+
+<Accordion title="US National Employment Hours and Earnings">
+  Current Employment Statistics (CES) program data.
+  
+  **Data Includes:**
+  - Nonfarm employment by industry
+  - Average hours worked
+  - Average hourly and weekly earnings
+  - Production worker data
+  - Monthly and annual data
+  
+  **Use Cases:**
+  - Wage analysis
+  - Industry trend forecasting
+  - Economic modeling
+  - Policy research
+  
+  ```python
+  from azureml.opendatasets import UsNationalEmployment
+  
+  employment = UsNationalEmployment()
+  df = employment.to_pandas_dataframe()
+  
+  # Analyze tech sector employment
+  tech_sector = df[df['industry'].str.contains('Technology')]
+  ```
+</Accordion>
+
+### Weather and Climate
+
+Historical and forecast weather data:
+
+<Accordion title="NOAA Weather Data">
+  Weather observations from the National Oceanic and Atmospheric Administration.
+  
+  **Data Includes:**
+  - Temperature (air, dew point)
+  - Precipitation
+  - Wind speed and direction
+  - Atmospheric pressure
+  - Visibility
+  - Station location
+  
+  **Use Cases:**
+  - Demand forecasting (energy, retail)
+  - Agricultural planning
+  - Predictive maintenance
+  - Supply chain optimization
+  
+  ```python
+  from azureml.opendatasets import NoaaIsdWeather
+  from datetime import datetime
+  
+  # Get weather for specific location and time
+  start = datetime(2023, 1, 1)
+  end = datetime(2023, 12, 31)
+  
+  weather = NoaaIsdWeather(start, end)
+  df = weather.to_pandas_dataframe()
+  
+  # Filter for a specific station
+  station_data = df[df['stationName'] == 'NEW YORK']
+  ```
+</Accordion>
+
+### Demographics and Census
+
+<Accordion title="US Population Data">
+  Census data including population by geography and demographics.
+  
+  **Data Includes:**
+  - Population counts by geography
+  - Age distributions
+  - Gender breakdowns
+  - Race and ethnicity
+  - Housing statistics
+  
+  **Use Cases:**
+  - Market segmentation
+  - Site selection
+  - Resource allocation
+  - Demographic forecasting
+</Accordion>
+
+### Public Safety
+
+<Accordion title="Boston Safety Data">
+  Public safety incidents and responses.
+  
+  **Data Includes:**
+  - Incident types and locations
+  - Response times
+  - Temporal patterns
+  - Geographic distribution
+  
+  **Use Cases:**
+  - Resource optimization
+  - Predictive policing (ethical considerations required)
+  - Emergency planning
+  - Urban safety analysis
+</Accordion>
+
+### Holidays
+
+<Accordion title="Public Holidays">
+  Holiday calendars for multiple countries.
+  
+  **Data Includes:**
+  - Holiday names and dates
+  - Country/region
+  - Holiday types (national, religious, etc.)
+  
+  **Use Cases:**
+  - Retail demand forecasting
+  - Workforce planning
+  - Event scheduling
+  - Global business operations
+  
+  ```python
+  from azureml.opendatasets import PublicHolidays
+  
+  holidays = PublicHolidays(start_date, end_date)
+  df = holidays.to_pandas_dataframe()
+  
+  # Filter for US holidays
+  us_holidays = df[df['countryOrRegion'] == 'United States']
+  ```
+</Accordion>
+
+## How to Access Datasets
+
+### Python SDK
+
+Access datasets directly in Python:
+
+```python
+from azureml.opendatasets import NycTlcYellow, NoaaIsdWeather
+from datetime import datetime
+import pandas as pd
+
+# Define date range
+start = datetime(2023, 1, 1)
+end = datetime(2023, 1, 31)
+
+# Load taxi data
+taxi = NycTlcYellow(start, end)
+taxi_df = taxi.to_pandas_dataframe()
+
+# Load weather data
+weather = NoaaIsdWeather(start, end)
+weather_df = weather.to_pandas_dataframe()
+
+# Merge datasets
+merged = pd.merge(
+    taxi_df,
+    weather_df,
+    left_on='tpepPickupDateTime',
+    right_on='datetime',
+    how='left'
+)
+
+print(f"Combined dataset: {len(merged)} rows")
+```
+
+### Azure Machine Learning
+
+Register datasets in your workspace:
+
+```python
+from azureml.core import Workspace, Dataset
+from azureml.opendatasets import NycTlcYellow
+
+# Connect to workspace
+ws = Workspace.from_config()
+
+# Load open dataset
+taxi = NycTlcYellow(start_date, end_date)
+taxi_df = taxi.to_pandas_dataframe()
+
+# Register as tabular dataset
+dataset = Dataset.Tabular.register_pandas_dataframe(
+    dataframe=taxi_df,
+    target=(ws.get_default_datastore(), 'taxi-data'),
+    name='nyc-taxi-january-2023',
+    description='NYC Yellow Taxi trips for January 2023'
+)
+
+print(f"Dataset registered: {dataset.name}")
+```
+
+### Azure Databricks
+
+Use datasets in Databricks notebooks:
+
+```python
+from azureml.opendatasets import UsLaborForce
+
+# Load dataset
+labor = UsLaborForce()
+df = labor.to_spark_dataframe()
+
+# Analyze with Spark
+df.createOrReplaceTempView("labor_force")
+
+result = spark.sql("""
+    SELECT year, AVG(unemployment_rate) as avg_unemployment
+    FROM labor_force
+    WHERE year >= 2020
+    GROUP BY year
+    ORDER BY year
+""")
+
+result.show()
+```
+
+### Azure Notebooks
+
+Access without installation:
+
+```python
+# No installation required in Azure Notebooks
+from azureml.opendatasets import NoaaIsdWeather
+from datetime import datetime
+
+start = datetime(2023, 6, 1)
+end = datetime(2023, 6, 30)
+
+weather = NoaaIsdWeather(start, end)
+df = weather.to_pandas_dataframe()
+
+# Visualize
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12, 6))
+plt.plot(df['datetime'], df['temperature'])
+plt.title('Temperature Trends - June 2023')
+plt.xlabel('Date')
+plt.ylabel('Temperature (°F)')
+plt.show()
+```
+
+## Integration Patterns
+
+### Enrich ML Models
+
+Combine Open Datasets with your data:
+
+```python
+import pandas as pd
+from azureml.opendatasets import NoaaIsdWeather, PublicHolidays
+from datetime import datetime
+
+# Your business data
+sales_df = pd.read_csv('sales_data.csv')
+sales_df['date'] = pd.to_datetime(sales_df['date'])
+
+# Load weather data
+start = sales_df['date'].min()
+end = sales_df['date'].max()
+weather = NoaaIsdWeather(start, end)
+weather_df = weather.to_pandas_dataframe()
+
+# Load holidays
+holidays = PublicHolidays(start, end)
+holidays_df = holidays.to_pandas_dataframe()
+
+# Merge all data
+enriched_df = sales_df.merge(
+    weather_df[['datetime', 'temperature', 'precipitation']],
+    left_on='date',
+    right_on='datetime',
+    how='left'
+).merge(
+    holidays_df[['date', 'holidayName']],
+    on='date',
+    how='left'
+)
+
+# Add features
+enriched_df['is_holiday'] = enriched_df['holidayName'].notna()
+enriched_df['temp_range'] = pd.cut(
+    enriched_df['temperature'],
+    bins=[0, 40, 60, 80, 100],
+    labels=['cold', 'cool', 'warm', 'hot']
+)
+
+print("Enhanced dataset ready for ML training")
+```
+
+### Time Series Forecasting
+
+Use historical data for predictions:
+
+```python
+from azureml.opendatasets import NycTlcYellow
+from sklearn.ensemble import RandomForestRegressor
+import pandas as pd
+import numpy as np
+
+# Load historical taxi data
+taxi = NycTlcYellow(datetime(2022, 1, 1), datetime(2023, 12, 31))
+df = taxi.to_pandas_dataframe()
+
+# Feature engineering
+df['hour'] = df['tpepPickupDateTime'].dt.hour
+df['day_of_week'] = df['tpepPickupDateTime'].dt.dayofweek
+df['month'] = df['tpepPickupDateTime'].dt.month
+
+# Aggregate to hourly demand
+hourly = df.groupby(
+    [df['tpepPickupDateTime'].dt.date, 'hour']
+).size().reset_index(name='trip_count')
+
+# Prepare features and target
+X = hourly[['hour', 'day_of_week', 'month']]
+y = hourly['trip_count']
+
+# Train model
+model = RandomForestRegressor(n_estimators=100)
+model.fit(X, y)
+
+# Forecast next week
+future_dates = pd.date_range(
+    start=datetime.now(),
+    periods=24*7,
+    freq='H'
+)
+future_X = pd.DataFrame({
+    'hour': future_dates.hour,
+    'day_of_week': future_dates.dayofweek,
+    'month': future_dates.month
+})
+
+predictions = model.predict(future_X)
+print(f"Weekly forecast: {predictions.sum():.0f} trips")
+```
+
+## Data Processing Pipeline
+
+How Open Datasets are maintained:
+
+<Steps>
+  <Step title="Source Ingestion">
+    Data is pulled from authoritative sources at regular intervals (e.g., FTP from NOAA).
+  </Step>
+  
+  <Step title="Parsing">
+    Raw data is parsed into structured format (CSV, Parquet).
+  </Step>
+  
+  <Step title="Enrichment">
+    Additional features are added (e.g., ZIP codes, nearest weather stations).
+  </Step>
+  
+  <Step title="Validation">
+    Data quality checks ensure consistency and completeness.
+  </Step>
+  
+  <Step title="Publishing">
+    Datasets are cohosted with Azure compute for fast access.
+  </Step>
+</Steps>
+
+## Request or Contribute Datasets
+
+<CardGroup cols={2}>
+  <Card title="Request a Dataset" icon="envelope">
+    Need data not currently available? Email the team with:
+    - Dataset name and description
+    - Source and licensing
+    - Size and update frequency
+    - Use cases
+    
+    [Request Dataset](mailto:aod@microsoft.com?Subject=Request%20dataset)
+  </Card>
+  
+  <Card title="Contribute a Dataset" icon="upload">
+    Have a public dataset to share? Provide:
+    - Dataset details and links
+    - Licensing information
+    - Update schedule
+    - Expected growth
+    
+    [Contribute Dataset](mailto:aod@microsoft.com?Subject=Contribute%20dataset)
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Accordion title="Performance Optimization">
+  **Tips for working with large datasets:**
+  
+  - Use date filtering to load only needed data
+  - Convert to Parquet format for faster reads
+  - Sample during development, full data in production
+  - Use Spark for datasets > 1GB
+  - Cache frequently used datasets
+  
+  ```python
+  # Good: Load only needed dates
+  taxi = NycTlcYellow(start_date, end_date)
+  
+  # Bad: Load entire history
+  # taxi = NycTlcYellow()  # Avoid
+  ```
+</Accordion>
+
+<Accordion title="Data Quality">
+  **Always validate Open Dataset data:**
+  
+  - Check for missing values
+  - Verify date ranges
+  - Validate geographic coordinates
+  - Remove outliers
+  - Handle timezone conversions
+  
+  ```python
+  # Check data quality
+  print(f"Missing values:\n{df.isnull().sum()}")
+  print(f"Date range: {df['date'].min()} to {df['date'].max()}")
+  print(f"Outliers: {df[df['temperature'] > 150].shape[0]}")
+  ```
+</Accordion>
+
+<Accordion title="Compliance and Privacy">
+  **All Open Datasets are public domain:**
+  
+  - No personally identifiable information (PII)
+  - Aggregated and anonymized data
+  - Review licensing for each dataset
+  - Cite sources in publications
+  - Respect data provider terms
+</Accordion>
+
+## Pricing
+
+<Note>
+  **Azure Open Datasets are completely free to access and use.** You only pay for:
+  - Compute resources to process data
+  - Storage if you copy datasets
+  - Network egress (minimal)
+</Note>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Dataset Catalog" icon="book">
+    Browse all available datasets
+    
+    [View Catalog](https://azure.microsoft.com/services/open-datasets/catalog/)
+  </Card>
+  
+  <Card title="Python SDK Docs" icon="python">
+    Complete SDK reference
+    
+    [API Reference](https://learn.microsoft.com/python/api/azureml-opendatasets/)
+  </Card>
+  
+  <Card title="Tutorials" icon="graduation-cap">
+    Learn with examples
+    
+    [Start Learning](/tutorials/open-datasets)
+  </Card>
+  
+  <Card title="GitHub Samples" icon="github">
+    Code examples
+    
+    [View Samples](https://github.com/Azure/OpenDatasetsNotebooks)
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Quickstart: Use Open Datasets in Azure ML](/quickstart)
+- [Tutorial: Build a forecasting model with weather data](/tutorials/weather-forecast)
+- [How to: Enrich your data with Open Datasets](/how-to/enrich-data)
+- [Reference: Complete dataset list](/reference/datasets)

@@ -1,0 +1,429 @@
+---
+title: Anomaly Detector Overview
+description: Monitor and detect anomalies in time series data with univariate and multivariate anomaly detection APIs
+---
+
+# Anomaly Detector
+
+<Warning>
+  Anomaly Detector is scheduled for retirement. The service remains available for existing applications but should not be used for new projects.
+</Warning>
+
+Anomalous Detector is an AI service that enables you to monitor and detect anomalies in time series data with minimal machine learning knowledge. The service provides both univariate (single variable) and multivariate (multiple variables) anomaly detection capabilities.
+
+## Key Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Univariate Detection" icon="chart-line">
+    Detect anomalies in single-variable time series data
+  </Card>
+  
+  <Card title="Multivariate Detection" icon="chart-mixed">
+    Detect anomalies across multiple correlated metrics using Graph Attention Networks
+  </Card>
+</CardGroup>
+
+## Univariate Anomaly Detection
+
+Detect anomalies in single-variable time series:
+
+### Streaming Detection
+
+Detect anomalies in real-time as data arrives:
+
+```python
+from azure.ai.anomalydetector import AnomalyDetectorClient
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint
+
+client = AnomalyDetectorClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com/",
+    credential=AzureKeyCredential("<key>")
+)
+
+# Prepare time series data
+series = [
+    TimeSeriesPoint(timestamp="2023-01-01T00:00:00Z", value=5.2),
+    TimeSeriesPoint(timestamp="2023-01-01T01:00:00Z", value=5.5),
+    TimeSeriesPoint(timestamp="2023-01-01T02:00:00Z", value=15.8),  # Anomaly
+    # ... more points
+]
+
+# Detect last point
+request = DetectRequest(series=series, granularity="hourly")
+response = client.detect_last_point(request)
+
+if response.is_anomaly:
+    print(f"Anomaly detected!")
+    print(f"Expected value: {response.expected_value}")
+    print(f"Actual value: {series[-1].value}")
+```
+
+### Batch Detection
+
+Detect anomalies across entire time series:
+
+```python
+# Detect all anomalies in series
+response = client.detect_entire_series(request)
+
+for i, (point, is_anomaly) in enumerate(zip(series, response.is_anomaly)):
+    if is_anomaly:
+        print(f"Anomaly at {point.timestamp}: {point.value}")
+        print(f"  Expected: {response.expected_values[i]}")
+        print(f"  Lower bound: {response.lower_margins[i]}")
+        print(f"  Upper bound: {response.upper_margins[i]}")
+```
+
+### Change Point Detection
+
+Detect trend changes in time series:
+
+```python
+# Detect change points (trend changes)
+response = client.detect_change_point(request)
+
+for i, (point, is_change_point) in enumerate(zip(series, response.is_change_point)):
+    if is_change_point:
+        print(f"Change point detected at {point.timestamp}")
+        print(f"  Confidence: {response.confidence_scores[i]}")
+```
+
+### Features
+
+<Tabs>
+  <Tab title="Automatic Model Selection">
+    The service automatically selects the best model for your data:
+    - Analyzes data patterns
+    - Adapts to seasonality
+    - Handles missing values
+    - No manual configuration needed
+  </Tab>
+  
+  <Tab title="Sensitivity Control">
+    Adjust detection sensitivity:
+    
+    ```python
+    request = DetectRequest(
+        series=series,
+        granularity="hourly",
+        sensitivity=95  # 0-99, higher = less sensitive
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Custom Intervals">
+    Specify custom seasonality:
+    
+    ```python
+    request = DetectRequest(
+        series=series,
+        granularity="hourly",
+        period=24  # 24-hour cycle
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Multivariate Anomaly Detection
+
+Detect anomalies across multiple correlated variables:
+
+### Use Cases
+
+- Server and equipment monitoring (CPU, memory, disk, network)
+- Manufacturing quality control
+- IoT sensor data analysis
+- Financial metrics monitoring
+- Application performance monitoring
+
+### How It Works
+
+Multivariate detection uses Graph Attention Networks to:
+1. Learn correlations between metrics
+2. Detect system-level anomalies
+3. Identify contributing variables
+4. Provide interpretability
+
+### Training a Model
+
+```python
+from azure.ai.anomalydetector.models import ModelInfo
+
+# Train multivariate model
+model_info = ModelInfo(
+    data_source="https://<storage>.blob.core.windows.net/data?<sas>",
+    start_time="2023-01-01T00:00:00Z",
+    end_time="2023-03-31T23:59:59Z",
+    display_name="Equipment Monitoring Model"
+)
+
+response = client.train_multivariate_model(model_info)
+model_id = response.model_id
+
+# Wait for training to complete
+while True:
+    model_status = client.get_multivariate_model(model_id)
+    if model_status.model_info.status == "READY":
+        break
+    time.sleep(10)
+
+print(f"Model trained successfully: {model_id}")
+```
+
+### Detecting Anomalies
+
+```python
+from azure.ai.anomalydetector.models import DetectionRequest
+
+# Run inference
+detection_request = DetectionRequest(
+    data_source="https://<storage>.blob.core.windows.net/test-data?<sas>",
+    start_time="2023-04-01T00:00:00Z",
+    end_time="2023-04-30T23:59:59Z"
+)
+
+response = client.detect_multivariate_anomaly(model_id, detection_request)
+result_id = response.result_id
+
+# Get detection results
+while True:
+    result = client.get_multivariate_detection_result(result_id)
+    if result.summary.status == "SUCCEEDED":
+        break
+    time.sleep(5)
+
+# Display anomalies
+for result in result.results:
+    if result.value.is_anomaly:
+        print(f"Anomaly at {result.timestamp}")
+        print(f"  Severity: {result.value.severity}")
+        print(f"  Contributing variables:")
+        for interpretation in result.value.interpretation:
+            print(f"    - {interpretation.variable} ({interpretation.contribution_score})")
+```
+
+### Data Requirements
+
+<AccordionGroup>
+  <Accordion title="Training Data">
+    - **Minimum**: 10,000 data points
+    - **Recommended**: 30,000+ data points
+    - **Variables**: 2-300 time series
+    - **Format**: CSV with timestamp and variable columns
+    - **Storage**: Azure Blob Storage with SAS token
+    - **Quality**: Clean, consistent data with minimal gaps
+  </Accordion>
+  
+  <Accordion title="Inference Data">
+    - Same variables as training data
+    - Continuous time series
+    - Same timestamp intervals
+    - Stored in Azure Blob Storage
+  </Accordion>
+</AccordionGroup>
+
+## API Features
+
+### Univariate APIs
+
+| API | Description | Use Case |
+|-----|-------------|----------|
+| **Detect Last Point** | Detect if latest point is anomaly | Real-time monitoring |
+| **Detect Entire Series** | Find all anomalies in series | Batch analysis |
+| **Detect Change Point** | Identify trend changes | Trend analysis |
+
+### Multivariate APIs
+
+| API | Description | Use Case |
+|-----|-------------|----------|
+| **Train Model** | Train on historical data | Model creation |
+| **Detect Batch** | Detect anomalies in data | Batch detection |
+| **Get Model Status** | Check training progress | Monitor training |
+| **List Models** | View all trained models | Model management |
+| **Delete Model** | Remove model | Cleanup |
+
+## Time Series Requirements
+
+### Univariate
+
+- **Format**: JSON array of timestamp-value pairs
+- **Minimum points**: 12 for non-seasonal, 4 periods for seasonal
+- **Maximum points**: 8,640 per request
+- **Timestamp**: ISO 8601 format
+- **Intervals**: Regular, consistent intervals
+
+```json
+[
+  {"timestamp": "2023-01-01T00:00:00Z", "value": 5.2},
+  {"timestamp": "2023-01-01T01:00:00Z", "value": 5.5},
+  {"timestamp": "2023-01-01T02:00:00Z", "value": 5.3}
+]
+```
+
+### Multivariate
+
+- **Format**: CSV file in Azure Blob Storage
+- **Columns**: Timestamp + variable columns
+- **Variables**: 2-300 time series
+- **Points**: 10,000+ for training
+- **Intervals**: Regular timestamps
+
+```csv
+timestamp,cpu,memory,disk,network
+2023-01-01T00:00:00Z,45.2,78.5,62.3,12.5
+2023-01-01T00:01:00Z,46.1,79.2,63.1,13.2
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="IT Operations" icon="server">
+    Monitor server metrics, detect performance issues, predict failures
+  </Card>
+  
+  <Card title="IoT Monitoring" icon="microchip">
+    Analyze sensor data, detect equipment anomalies, predictive maintenance
+  </Card>
+  
+  <Card title="Business Metrics" icon="chart-line">
+    Track KPIs, detect unusual patterns, identify business issues
+  </Card>
+  
+  <Card title="Financial Services" icon="dollar-sign">
+    Fraud detection, trading anomalies, risk monitoring
+  </Card>
+</CardGroup>
+
+## Example Scenarios
+
+### Server Monitoring
+
+```python
+# Monitor CPU, memory, disk, and network
+variables = ['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic']
+
+# Train model on historical data
+model = train_multivariate_model(variables, training_data)
+
+# Detect anomalies in real-time
+for metrics in stream_metrics():
+    result = detect_anomaly(model, metrics)
+    if result.is_anomaly:
+        alert_ops_team(result)
+```
+
+### Revenue Monitoring
+
+```python
+# Monitor daily revenue
+revenue_data = get_daily_revenue()
+
+# Detect unusual patterns
+request = DetectRequest(
+    series=revenue_data,
+    granularity="daily",
+    sensitivity=90
+)
+
+result = client.detect_entire_series(request)
+anomalies = [point for point, is_anom in zip(revenue_data, result.is_anomaly) if is_anom]
+
+for anomaly in anomalies:
+    print(f"Unusual revenue on {anomaly.timestamp}: ${anomaly.value}")
+```
+
+## SDK Support
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    ```bash
+    pip install azure-ai-anomalydetector
+    ```
+  </Card>
+  
+  <Card title="C#" icon="c">
+    ```bash
+    dotnet add package Azure.AI.AnomalyDetector
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java">
+    Maven package for Anomaly Detector
+  </Card>
+  
+  <Card title="JavaScript" icon="js">
+    ```bash
+    npm install @azure/ai-anomaly-detector
+    ```
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+- Use sufficient training data (10,000+ points for multivariate)
+- Ensure data quality (minimal gaps, clean data)
+- Choose appropriate granularity (hourly, daily, etc.)
+- Adjust sensitivity based on use case
+- Monitor model performance over time
+- Retrain models periodically with new data
+- Handle missing values appropriately
+- Use multivariate for correlated metrics
+
+## Limitations
+
+### Univariate
+
+- Maximum 8,640 points per request
+- Regular time intervals required
+- Limited to single variable
+
+### Multivariate
+
+- Requires Azure Blob Storage
+- Training time depends on data size
+- Maximum 300 variables
+- Minimum 10,000 training points
+
+## Pricing
+
+- **Free Tier (F0)**: Limited transactions for testing
+- **Standard Tier (S0)**: Pay per transaction
+- Univariate and multivariate priced differently
+- Training and inference costs
+
+## Migration Guidance
+
+With Anomaly Detector retiring, consider:
+
+- **Azure Monitor**: For infrastructure monitoring
+- **Azure Metrics Advisor**: For business metrics (also retiring)
+- **Custom ML models**: Using Azure Machine Learning
+- **Third-party solutions**: Time series anomaly detection services
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Resource">
+    Create an Anomaly Detector resource in Azure Portal (for existing apps)
+  </Step>
+  
+  <Step title="Prepare Data">
+    Format time series data according to requirements
+  </Step>
+  
+  <Step title="Choose Detection Type">
+    Select univariate or multivariate based on your needs
+  </Step>
+  
+  <Step title="Integrate API">
+    Use SDK or REST API to detect anomalies
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [View API Reference](https://learn.microsoft.com/rest/api/anomalydetector/)
+- [Explore Code Samples](https://github.com/Azure-Samples/AnomalyDetector)
+- [Learn about Best Practices](https://learn.microsoft.com/azure/ai-services/anomaly-detector/concepts/best-practices)
+- [Plan Migration Strategy](https://learn.microsoft.com/azure/ai-services/anomaly-detector/overview#retirement-announcement)

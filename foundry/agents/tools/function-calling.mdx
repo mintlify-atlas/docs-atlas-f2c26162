@@ -1,0 +1,92 @@
+---
+title: Function Calling Tool
+description: Define custom functions for agents to extend capabilities with business logic, API calls, and database queries.
+---
+
+# Function Calling
+
+Function calling enables agents to invoke custom functions you define, extending their capabilities with business logic, external APIs, and system integrations.
+
+## How It Works
+
+1. **Define functions** with clear descriptions and parameters
+2. **Agent determines need** based on user request
+3. **Run status changes** to `requires_action`
+4. **Your code executes** the actual function
+5. **Submit results** back to agent
+6. **Agent processes** and generates response
+
+<Warning>
+The agent requests function calls but doesn't execute them. Your application code must handle execution.
+</Warning>
+
+## Quick Start
+
+<CodeGroup>
+```python Python
+from azure.ai.projects.models import FunctionTool
+import json
+
+def get_weather(location: str) -> str:
+    """
+    Get current weather for a location.
+    
+    :param location: City and state (e.g., "Seattle, WA")
+    :return: Weather as JSON string
+    """
+    # Mock data
+    weather_data = {
+        "Seattle, WA": "Sunny, 72°F",
+        "New York, NY": "Cloudy, 65°F"
+    }
+    return json.dumps({"weather": weather_data.get(location, "Unknown")})
+
+# Register function
+function_tool = FunctionTool(functions={get_weather})
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="weather-assistant",
+    instructions="Help users check weather using the get_weather function",
+    tools=function_tool.definitions,
+)
+```
+</CodeGroup>
+
+## Handling Function Calls
+
+<CodeGroup>
+```python Python
+run = project.agents.runs.create(thread_id=thread.id, agent_id=agent.id)
+
+while run.status in ["queued", "in_progress", "requires_action"]:
+    if run.status == "requires_action":
+        tool_outputs = []
+        for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+            if tool_call.function.name == "get_weather":
+                args = json.loads(tool_call.function.arguments)
+                output = get_weather(args["location"])
+                tool_outputs.append({
+                    "tool_call_id": tool_call.id,
+                    "output": output
+                })
+        
+        project.agents.runs.submit_tool_outputs(
+            thread_id=thread.id,
+            run_id=run.id,
+            tool_outputs=tool_outputs
+        )
+    
+    run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+```
+</CodeGroup>
+
+## Best Practices
+
+- Write clear function descriptions
+- Define required parameters explicitly
+- Return structured JSON
+- Handle errors gracefully
+- Implement timeout logic (runs expire after 10 minutes)
+
+See [Azure Functions](/foundry/agents/tools/azure-functions) for serverless hosting.

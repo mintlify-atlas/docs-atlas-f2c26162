@@ -1,122 +1,285 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Azure AI Documentation",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0078D4",
+    "light": "#50E6FF",
+    "dark": "#005A9E"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/MicrosoftDocs/azure-ai-docs"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/MicrosoftDocs/azure-ai-docs"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Overview",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Azure AI Services",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "services/overview",
+              "services/ai-foundry",
+              "services/machine-learning",
+              "services/ai-search",
+              "services/open-datasets"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Microsoft Foundry",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Getting Started",
             "pages": [
-              "api-reference/introduction"
+              "foundry/overview",
+              "foundry/quickstart",
+              "foundry/sdk-overview"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Core Concepts",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "foundry/concepts/agents",
+              "foundry/concepts/models",
+              "foundry/concepts/tools"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "foundry/agents/overview",
+              "foundry/agents/standard-setup",
+              "foundry/agents/threads-runs-messages",
+              "foundry/agents/environment-setup"
+            ]
+          },
+          {
+            "group": "Agent Tools",
+            "pages": [
+              "foundry/agents/tools/code-interpreter",
+              "foundry/agents/tools/file-search",
+              "foundry/agents/tools/function-calling",
+              "foundry/agents/tools/azure-ai-search",
+              "foundry/agents/tools/azure-functions"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "foundry/models/overview",
+              "foundry/models/deployment",
+              "foundry/models/region-support"
+            ]
+          },
+          {
+            "group": "Solutions",
+            "pages": [
+              "foundry/solutions/overview"
+            ]
+          },
+          {
+            "group": "Responsible AI",
+            "pages": [
+              "foundry/responsible-ai/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Machine Learning",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "machine-learning/overview",
+              "machine-learning/quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "machine-learning/concepts/workspace",
+              "machine-learning/concepts/compute",
+              "machine-learning/concepts/mlops"
+            ]
+          },
+          {
+            "group": "Training",
+            "pages": [
+              "machine-learning/training/overview",
+              "machine-learning/training/distributed-training"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "machine-learning/deployment/overview",
+              "machine-learning/deployment/endpoints"
+            ]
+          },
+          {
+            "group": "Component Reference",
+            "pages": [
+              "machine-learning/components/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "AI Services",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "ai-services/overview"
+            ]
+          },
+          {
+            "group": "Vision",
+            "pages": [
+              "ai-services/computer-vision/overview",
+              "ai-services/document-intelligence/overview",
+              "ai-services/custom-vision/overview"
+            ]
+          },
+          {
+            "group": "Language",
+            "pages": [
+              "ai-services/language/overview",
+              "ai-services/translator/overview"
+            ]
+          },
+          {
+            "group": "Speech",
+            "pages": [
+              "ai-services/speech/overview"
+            ]
+          },
+          {
+            "group": "Decision",
+            "pages": [
+              "ai-services/anomaly-detector/overview",
+              "ai-services/personalizer/overview"
+            ]
+          },
+          {
+            "group": "Content Understanding",
+            "pages": [
+              "ai-services/content-understanding/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "AI Search",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "search/overview",
+              "search/quickstart",
+              "search/create-service"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "search/concepts/classic-search",
+              "search/concepts/agentic-retrieval",
+              "search/concepts/vector-search",
+              "search/concepts/hybrid-search"
+            ]
+          },
+          {
+            "group": "Agentic Retrieval",
+            "pages": [
+              "search/agentic/overview",
+              "search/agentic/knowledge-sources",
+              "search/agentic/create-index",
+              "search/agentic/create-knowledge-base"
+            ]
+          },
+          {
+            "group": "Indexing",
+            "pages": [
+              "search/indexing/overview",
+              "search/indexing/indexers"
+            ]
+          },
+          {
+            "group": "Queries",
+            "pages": [
+              "search/queries/overview",
+              "search/queries/full-text",
+              "search/queries/vector"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Open Datasets",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "open-datasets/overview",
+              "open-datasets/catalog"
+            ]
+          },
+          {
+            "group": "How-To Guides",
+            "pages": [
+              "open-datasets/how-to/create-dataset"
+            ]
+          },
+          {
+            "group": "Dataset Catalog",
+            "pages": [
+              "open-datasets/datasets/public-holidays",
+              "open-datasets/datasets/covid-19",
+              "open-datasets/datasets/genomics"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "REST APIs",
+            "pages": [
+              "api/foundry",
+              "api/machine-learning",
+              "api/search"
+            ]
+          },
+          {
+            "group": "SDKs",
+            "pages": [
+              "sdk/python",
+              "sdk/dotnet",
+              "sdk/javascript"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

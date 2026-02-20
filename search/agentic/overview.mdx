@@ -1,0 +1,29 @@
+---
+title: Agentic Retrieval Overview
+description: Multi-query pipeline for complex agent workflows with LLM-assisted query planning and parallel retrieval.
+---
+
+# Agentic Retrieval Overview
+
+Agentic retrieval transforms complex user questions into focused subqueries, executes them in parallel, and returns a comprehensive, agent-optimized response.
+
+## Key Features
+
+- **LLM Query Planning**: Automatically decomposes complex questions
+- **Parallel Execution**: Runs multiple searches simultaneously
+- **Multi-Source**: Queries indexed and remote knowledge sources
+- **Semantic Reranking**: Promotes most relevant results
+- **Agent-Optimized Response**: Structured output for downstream consumption
+
+## Architecture
+
+Knowledge Base orchestrates the entire pipeline, connecting to LLMs for planning and knowledge sources for retrieval.
+
+## When to Use
+
+- Complex multi-part questions
+- Agent-to-agent workflows
+- RAG applications requiring high-quality grounding
+- Multi-source data scenarios
+
+See [Agentic Retrieval Concepts](/search/concepts/agentic-retrieval) for detailed information.

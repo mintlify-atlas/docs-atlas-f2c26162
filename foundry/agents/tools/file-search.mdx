@@ -1,0 +1,75 @@
+---
+title: File Search Tool
+description: Retrieve knowledge from uploaded documents using hybrid vector and keyword search in Microsoft Foundry agents.
+---
+
+# File Search Tool
+
+File Search augments agents with knowledge from documents like product information, internal documentation, or user-provided files.
+
+## How It Works
+
+The file search tool implements retrieval best practices:
+
+1. **Rewrites queries** for optimal search
+2. **Breaks down complex queries** into multiple parallel searches
+3. **Runs hybrid search** (vector + keyword) across vector stores
+4. **Reranks results** to select most relevant content
+5. **Injects into context** for agent to use
+
+**Default settings**:
+- Chunk size: 800 tokens
+- Chunk overlap: 400 tokens
+- Embedding model: text-embedding-3-large (256 dimensions)
+- Max chunks in context: 20
+
+## Quick Start
+
+<CodeGroup>
+```python Python
+from azure.ai.projects.models import FileSearchTool, FilePurpose
+
+# Upload file
+file = project.agents.files.upload_and_poll(
+    file_path="product_catalog.pdf",
+    purpose=FilePurpose.AGENTS
+)
+
+# Create file search tool
+file_search = FileSearchTool(file_ids=[file.id])
+
+agent = project.agents.create_agent(
+    model="gpt-4o",
+    name="product-expert",
+    instructions="Answer questions using uploaded product files",
+    tools=file_search.definitions,
+    tool_resources=file_search.resources,
+)
+```
+</CodeGroup>
+
+## Vector Stores
+
+Vector stores enable file search capabilities:
+
+- Store up to 10,000 files per vector store
+- Attach one vector store to agent
+- Attach one vector store to thread
+- Automatic parsing, chunking, and embedding
+
+<Warning>
+Maximum file size: 512 MB
+Maximum tokens per file: 5,000,000
+</Warning>
+
+## Setup Dependencies
+
+### Basic Setup
+- Microsoft-managed storage and search
+
+### Standard Setup
+- Uses your Azure Blob Storage
+- Uses your Azure AI Search resource
+- Full data control
+
+See [Standard Setup](/foundry/agents/standard-setup) for details.

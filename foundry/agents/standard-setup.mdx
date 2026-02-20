@@ -1,0 +1,344 @@
+---
+title: Standard Agent Setup
+description: Learn about enterprise-ready agent deployments with standard setup, including data control, security features, and resource configuration.
+---
+
+# Standard Agent Setup
+
+Standard Agent Setup provides enterprise-grade security and data control by using customer-managed, single-tenant Azure resources to store all agent state and data.
+
+## Overview
+
+In Standard Setup:
+- **All agent data** (conversations, files, vector stores) **stays in your Azure resources**
+- **You own and control** the storage, database, and search resources
+- **Data never leaves your tenant** without your explicit configuration
+- **Enterprise security** features are enabled by default
+
+## Bring Your Own (BYO) Resources
+
+Standard Setup requires three customer-managed Azure resources:
+
+### Azure Storage Account
+
+**Purpose**: Store all uploaded files and system data
+
+**What's stored**:
+- Files uploaded by developers during agent configuration
+- Files uploaded by end-users during interactions
+- Intermediate processing data (chunks, embeddings)
+
+**Requirements**:
+- Standard or Premium performance tier
+- Blob storage enabled
+- Minimum: General Purpose v2
+
+**Containers created automatically**:
+- `<workspace-id>-azureml-blobstore`: User files
+- `<workspace-id>-agents-blobstore`: System data
+
+### Azure Cosmos DB for NoSQL
+
+**Purpose**: Store conversation history and agent metadata
+
+**What's stored**:
+- End-user conversations (messages and responses)
+- Internal system messages
+- Agent metadata (instructions, tools, configurations)
+
+**Requirements**:
+- **Minimum total throughput**: 3,000 RU/s
+- Supported modes: Provisioned Throughput or Serverless
+- NoSQL API
+
+<Warning>
+Each project requires 3 containers × 1,000 RU/s = 3,000 RU/s minimum. If deploying multiple projects under the same Foundry account, multiply accordingly (e.g., 2 projects = 6,000 RU/s).
+</Warning>
+
+**Containers created automatically**:
+- `thread-message-store`: End-user conversations
+- `system-thread-message-store`: Internal system messages
+- `agent-entity-store`: Agent configurations
+
+### Azure AI Search
+
+**Purpose**: Create and manage vector stores for file search
+
+**What's stored**:
+- Vector embeddings from uploaded documents
+- Search indexes for file search tool
+- Chunk metadata and references
+
+**Requirements**:
+- Basic tier or higher
+- Sufficient capacity for expected vector data
+
+## Project-Level Data Isolation
+
+Standard Setup enforces strict data boundaries:
+
+- **Each project gets isolated containers** in Storage and Cosmos DB
+- **Data cannot cross project boundaries**
+- **Projects cannot access each other's resources**
+- **Simplifies compliance** and access control
+
+This default behavior reduces setup complexity while maintaining strict security.
+
+## Setup Process
+
+### Option 1: Bicep Template (Recommended)
+
+Deploy a complete Standard Setup using Azure Bicep:
+
+<Steps>
+  <Step title="Clone the template repository">
+    ```bash
+    git clone https://github.com/azure-ai-foundry/foundry-samples.git
+    cd foundry-samples/infrastructure/infrastructure-setup-bicep/41-standard-agent-setup
+    ```
+  </Step>
+  
+  <Step title="Customize parameters (optional)">
+    Edit `main.bicep` to use existing resources:
+    
+    ```bicep
+    // Use existing Azure OpenAI
+    param existingAoaiResourceId string = '/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.CognitiveServices/accounts/{name}'
+    
+    // Use existing Storage
+    param aiStorageAccountResourceId string = '/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name}'
+    
+    // Use existing Cosmos DB
+    param cosmosDBResourceId string = '/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.DocumentDB/databaseAccounts/{name}'
+    
+    // Use existing AI Search
+    param aiSearchServiceResourceId string = '/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Search/searchServices/{name}'
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    ```bash
+    az deployment group create \
+      --resource-group <your-resource-group> \
+      --template-file main.bicep
+    ```
+    
+    This creates:
+    - Foundry account and project
+    - Azure Storage, Cosmos DB, and AI Search (if not provided)
+    - GPT-4.1 model deployment
+    - All required connections
+    - Role assignments
+    - Capability hosts
+  </Step>
+</Steps>
+
+### Option 2: Manual Setup
+
+For granular control, set up resources manually:
+
+<Steps>
+  <Step title="Create Azure Resources">
+    ```bash
+    # Create Storage Account
+    az storage account create \
+      --name <storage-name> \
+      --resource-group <rg> \
+      --sku Standard_LRS
+    
+    # Create Cosmos DB
+    az cosmosdb create \
+      --name <cosmos-name> \
+      --resource-group <rg> \
+      --default-consistency-level Session \
+      --throughput 3000
+    
+    # Create AI Search
+    az search service create \
+      --name <search-name> \
+      --resource-group <rg> \
+      --sku basic
+    ```
+  </Step>
+  
+  <Step title="Create Foundry Resource and Project">
+    ```bash
+    # Create Foundry account
+    az cognitiveservices account create \
+      --name <foundry-account> \
+      --resource-group <rg> \
+      --kind AIServices \
+      --sku S0
+    
+    # Create project
+    az ml workspace create \
+      --name <project-name> \
+      --resource-group <rg> \
+      --type project
+    ```
+  </Step>
+  
+  <Step title="Create Project Connections">
+    Create connections to your resources:
+    
+    ```bash
+    # Storage connection
+    az ml connection create \
+      --file storage-connection.yml \
+      --resource-group <rg> \
+      --workspace-name <project-name>
+    
+    # Cosmos DB connection
+    az ml connection create \
+      --file cosmos-connection.yml \
+      --resource-group <rg> \
+      --workspace-name <project-name>
+    
+    # AI Search connection
+    az ml connection create \
+      --file search-connection.yml \
+      --resource-group <rg> \
+      --workspace-name <project-name>
+    ```
+  </Step>
+  
+  <Step title="Assign RBAC Roles">
+    Grant the project's managed identity access:
+    
+    ```bash
+    PROJECT_IDENTITY=$(az ml workspace show \
+      --name <project-name> \
+      --resource-group <rg> \
+      --query identity.principalId -o tsv)
+    
+    # Storage permissions
+    az role assignment create \
+      --assignee $PROJECT_IDENTITY \
+      --role "Storage Blob Data Contributor" \
+      --scope /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{storage}
+    
+    # Cosmos DB permissions
+    az cosmosdb sql role assignment create \
+      --account-name <cosmos-name> \
+      --resource-group <rg> \
+      --role-definition-name "Cosmos DB Built-in Data Contributor" \
+      --principal-id $PROJECT_IDENTITY
+    
+    # AI Search permissions
+    az role assignment create \
+      --assignee $PROJECT_IDENTITY \
+      --role "Search Index Data Contributor" \
+      --scope /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Search/searchServices/{search}
+    ```
+  </Step>
+  
+  <Step title="Create Capability Hosts">
+    ```bash
+    # Account capability host
+    az cognitiveservices account capability-host create \
+      --account-name <foundry-account> \
+      --resource-group <rg> \
+      --capability-host-kind Agents
+    
+    # Project capability host
+    az ml capability-host create \
+      --workspace-name <project-name> \
+      --resource-group <rg> \
+      --properties '{"cosmos_connection": "<cosmos-conn>", "storage_connection": "<storage-conn>", "search_connection": "<search-conn>"}'
+    ```
+  </Step>
+</Steps>
+
+## Using Existing Resources
+
+You can integrate existing Azure resources into Standard Setup:
+
+### Existing Azure Storage
+
+<Steps>
+  <Step title="Get Resource ID">
+    ```bash
+    az storage account show \
+      --resource-group <rg> \
+      --name <storage-name> \
+      --query id --output tsv
+    ```
+  </Step>
+  
+  <Step title="Update Template">
+    Set `aiStorageAccountResourceId` parameter in the Bicep template
+  </Step>
+</Steps>
+
+### Existing Cosmos DB
+
+<Warning>
+Verify your Cosmos DB has sufficient throughput: minimum 3,000 RU/s per project.
+</Warning>
+
+<Steps>
+  <Step title="Get Resource ID">
+    ```bash
+    az cosmosdb show \
+      --resource-group <rg> \
+      --name <cosmos-name> \
+      --query id --output tsv
+    ```
+  </Step>
+  
+  <Step title="Update Template">
+    Set `cosmosDBResourceId` parameter in the Bicep template
+  </Step>
+</Steps>
+
+### Existing AI Search
+
+<Steps>
+  <Step title="Get Resource ID">
+    ```bash
+    az search service show \
+      --resource-group <rg> \
+      --name <search-name> \
+      --query id --output tsv
+    ```
+  </Step>
+  
+  <Step title="Update Template">
+    Set `aiSearchServiceResourceId` parameter in the Bicep template
+  </Step>
+</Steps>
+
+## Required Permissions
+
+To deploy Standard Setup, you need:
+
+| Action | Required Role |
+|--------|---------------|
+| Create account and project | Azure AI Account Owner |
+| Assign RBAC for resources | Role Based Access Control Administrator |
+| Create and edit agents | Azure AI User |
+
+## Limitations
+
+<Warning>
+- **Capability host cannot be updated** after creation. Changes require recreating the project.
+- **Cosmos DB throughput** must meet minimum requirements or provisioning will fail.
+- **Azure Policy restrictions** on CMK-encrypted indexes may prevent automatic index creation.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/foundry/agents/environment-setup">
+    Complete environment configuration guide
+  </Card>
+  <Card title="Virtual Networks" icon="network-wired" href="/foundry/agents/virtual-networks">
+    Add private network isolation
+  </Card>
+  <Card title="Create Agent" icon="robot" href="/foundry/quickstart">
+    Build your first agent
+  </Card>
+  <Card title="Use Your Resources" icon="database" href="/foundry/agents/use-your-own-resources">
+    Detailed resource configuration
+  </Card>
+</CardGroup>

@@ -1,0 +1,509 @@
+---
+title: Training Models in Azure Machine Learning
+description: Learn how to train machine learning models using Azure Machine Learning with SDK, CLI, and Studio.
+---
+
+# Train Models with Azure Machine Learning
+
+Azure Machine Learning provides multiple ways to train machine learning models at scale, from interactive development to distributed training on powerful compute clusters.
+
+<Info>
+Azure ML supports training with popular frameworks including PyTorch, TensorFlow, Scikit-learn, XGBoost, and more.
+</Info>
+
+## Training Methods
+
+<CardGroup cols={3}>
+  <Card title="Python SDK" icon="python">
+    Programmatic job submission with full control
+  </Card>
+  <Card title="Azure CLI" icon="terminal">
+    Command-line training for automation and CI/CD
+  </Card>
+  <Card title="Studio UI" icon="browser">
+    Visual interface for no-code training
+  </Card>
+</CardGroup>
+
+## Prerequisites
+
+Before training models, ensure you have:
+
+<Steps>
+  <Step title="Azure Subscription">
+    Active Azure subscription ([create free account](https://azure.microsoft.com/free))
+  </Step>
+  <Step title="ML Workspace">
+    Azure Machine Learning workspace ([create workspace](/machine-learning/quickstart))
+  </Step>
+  <Step title="Development Tools">
+    - Python SDK v2: `pip install azure-ai-ml`
+    - Azure CLI with ML extension: `az extension add -n ml`
+  </Step>
+  <Step title="Training Data">
+    Data stored in Azure Storage or registered as data assets
+  </Step>
+</Steps>
+
+## Training Workflow
+
+The typical training workflow in Azure Machine Learning:
+
+<Steps>
+  <Step title="Connect to Workspace">
+    Authenticate and connect to your ML workspace
+  </Step>
+  <Step title="Prepare Data">
+    Load and register training data as assets
+  </Step>
+  <Step title="Create Environment">
+    Define software dependencies for training
+  </Step>
+  <Step title="Configure Compute">
+    Select compute target for training job
+  </Step>
+  <Step title="Define Training Job">
+    Specify training script, parameters, and resources
+  </Step>
+  <Step title="Submit Job">
+    Execute training and monitor progress
+  </Step>
+  <Step title="Register Model">
+    Save trained model to model registry
+  </Step>
+</Steps>
+
+## Connect to Workspace
+
+<Tabs>
+  <Tab title="Python SDK">
+    ```python
+    from azure.ai.ml import MLClient
+    from azure.identity import DefaultAzureCredential
+    
+    # Connect to workspace
+    subscription_id = "<SUBSCRIPTION_ID>"
+    resource_group = "<RESOURCE_GROUP>"
+    workspace_name = "<WORKSPACE_NAME>"
+    
+    ml_client = MLClient(
+        DefaultAzureCredential(),
+        subscription_id,
+        resource_group,
+        workspace_name
+    )
+    
+    print(f"Connected to workspace: {ml_client.workspace_name}")
+    ```
+  </Tab>
+  
+  <Tab title="Azure CLI">
+    ```bash
+    # Login to Azure
+    az login
+    
+    # Set active subscription
+    az account set --subscription <SUBSCRIPTION_ID>
+    
+    # Set default workspace
+    az configure --defaults \
+      group=<RESOURCE_GROUP> \
+      workspace=<WORKSPACE_NAME>
+    ```
+  </Tab>
+</Tabs>
+
+## Example: Train Scikit-learn Model
+
+Complete example training an iris classification model:
+
+### 1. Training Script
+
+Create `train.py`:
+
+```python
+import argparse
+import pandas as pd
+import mlflow
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+
+# Parse arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("--data", type=str, help="Path to training data")
+parser.add_argument("--n_estimators", type=int, default=100)
+parser.add_argument("--max_depth", type=int, default=5)
+args = parser.parse_args()
+
+# Enable autologging
+mlflow.sklearn.autolog()
+
+# Load data
+df = pd.read_csv(args.data)
+X = df.drop("target", axis=1)
+y = df["target"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Train model
+model = RandomForestClassifier(
+    n_estimators=args.n_estimators,
+    max_depth=args.max_depth,
+    random_state=42
+)
+
+model.fit(X_train, y_train)
+
+# Evaluate
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred, average="weighted")
+
+print(f"Accuracy: {accuracy}")
+print(f"F1 Score: {f1}")
+
+# Log additional metrics
+mlflow.log_metric("accuracy", accuracy)
+mlflow.log_metric("f1_score", f1)
+```
+
+### 2. Submit Training Job
+
+<CodeGroup>
+```python Python SDK
+from azure.ai.ml import command, Input
+
+job = command(
+    code="./src",
+    command="python train.py --data ${{inputs.data}} --n_estimators ${{inputs.n_estimators}}",
+    inputs={
+        "data": Input(
+            type="uri_file",
+            path="azureml://datastores/workspaceblobstore/paths/iris.csv"
+        ),
+        "n_estimators": 100,
+    },
+    environment="azureml://registries/azureml/environments/sklearn-1.5/versions/1",
+    compute="cpu-cluster",
+    display_name="iris-training",
+    experiment_name="iris-classification",
+    description="Train Random Forest on Iris dataset"
+)
+
+# Submit job
+returned_job = ml_client.jobs.create_or_update(job)
+print(f"Job submitted: {returned_job.name}")
+print(f"Studio URL: {returned_job.studio_url}")
+
+# Wait for completion (optional)
+ml_client.jobs.stream(returned_job.name)
+```
+
+```bash Azure CLI
+# Create job YAML file (job.yml)
+cat > job.yml << EOF
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+command: python train.py --data \${{inputs.data}} --n_estimators \${{inputs.n_estimators}}
+code: ./src
+inputs:
+  data:
+    type: uri_file
+    path: azureml://datastores/workspaceblobstore/paths/iris.csv
+  n_estimators: 100
+environment: azureml://registries/azureml/environments/sklearn-1.5/versions/1
+compute: cpu-cluster
+experiment_name: iris-classification
+display_name: iris-training
+EOF
+
+# Submit job
+az ml job create --file job.yml
+
+# Stream logs
+az ml job stream --name <job-name>
+```
+</CodeGroup>
+
+## Training on Different Compute
+
+<Tabs>
+  <Tab title="Compute Cluster">
+    Use managed compute clusters for scalable training:
+    
+    ```python
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml://environments/my-env/versions/1",
+        compute="cpu-cluster",  # Existing cluster
+        instance_count=1
+    )
+    ```
+    
+    **When to use:**
+    - Large datasets requiring multiple nodes
+    - Long-running training jobs
+    - Distributed training
+    - Hyperparameter tuning
+  </Tab>
+  
+  <Tab title="Serverless Compute">
+    Use on-demand compute without cluster management:
+    
+    ```python
+    from azure.ai.ml.entities import ResourceConfiguration
+    
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml://environments/my-env/versions/1",
+        resources=ResourceConfiguration(
+            instance_type="Standard_DS3_v2",
+            instance_count=1
+        ),
+        # No compute parameter = serverless
+    )
+    ```
+    
+    **When to use:**
+    - Quick experiments
+    - No quota management needed
+    - Variable workloads
+    - Pay-per-use scenarios
+  </Tab>
+  
+  <Tab title="Compute Instance">
+    Use dedicated development compute:
+    
+    ```python
+    job = command(
+        code="./src",
+        command="python train.py",
+        environment="azureml://environments/my-env/versions/1",
+        compute="my-compute-instance"
+    )
+    ```
+    
+    **When to use:**
+    - Interactive development
+    - Small-scale training
+    - Debugging
+    - Testing before scaling
+  </Tab>
+</Tabs>
+
+## Using Curated Environments
+
+Azure ML provides pre-built environments for common frameworks:
+
+```python
+# PyTorch GPU environment
+environment="azureml://registries/azureml/environments/pytorch-2.0-cuda11.7/versions/1"
+
+# TensorFlow GPU environment  
+environment="azureml://registries/azureml/environments/tensorflow-2.13-cuda11/versions/1"
+
+# Scikit-learn CPU environment
+environment="azureml://registries/azureml/environments/sklearn-1.5/versions/1"
+
+# Custom environment
+from azure.ai.ml.entities import Environment
+
+custom_env = Environment(
+    name="custom-training-env",
+    description="Custom environment with specific packages",
+    conda_file="environment.yml",
+    image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest"
+)
+
+ml_client.environments.create_or_update(custom_env)
+```
+
+## Hyperparameter Tuning
+
+Optimize model hyperparameters with sweep jobs:
+
+```python
+from azure.ai.ml.sweep import Choice, Uniform, MedianStoppingPolicy
+
+# Define search space
+job_for_sweep = job(
+    n_estimators=Choice([50, 100, 200]),
+    max_depth=Choice([3, 5, 7, 10]),
+    learning_rate=Uniform(0.001, 0.1)
+)
+
+# Configure sweep
+sweep_job = job_for_sweep.sweep(
+    sampling_algorithm="random",
+    primary_metric="accuracy",
+    goal="maximize",
+    max_total_trials=20,
+    max_concurrent_trials=4,
+    early_termination_policy=MedianStoppingPolicy(
+        delay_evaluation=5,
+        evaluation_interval=2
+    )
+)
+
+returned_sweep = ml_client.jobs.create_or_update(sweep_job)
+```
+
+## Tracking Experiments
+
+Organize training runs into experiments:
+
+```python
+# Submit multiple runs to same experiment
+for learning_rate in [0.001, 0.01, 0.1]:
+    job = command(
+        code="./src",
+        command=f"python train.py --lr {learning_rate}",
+        environment="azureml://environments/pytorch/versions/1",
+        compute="gpu-cluster",
+        experiment_name="learning-rate-comparison",  # Group related runs
+        display_name=f"lr-{learning_rate}"
+    )
+    ml_client.jobs.create_or_update(job)
+
+# Query experiment runs
+from azure.ai.ml.entities import Job
+
+runs = ml_client.jobs.list(
+    parent_job_name="learning-rate-comparison"
+)
+
+for run in runs:
+    print(f"{run.display_name}: {run.status}")
+```
+
+## Logging Metrics and Artifacts
+
+Track training progress with MLflow:
+
+```python
+import mlflow
+
+# Start MLflow run
+with mlflow.start_run():
+    # Log parameters
+    mlflow.log_param("epochs", 10)
+    mlflow.log_param("batch_size", 32)
+    
+    # Training loop
+    for epoch in range(10):
+        train_loss = train_epoch(model, data_loader)
+        val_loss = validate(model, val_loader)
+        
+        # Log metrics
+        mlflow.log_metric("train_loss", train_loss, step=epoch)
+        mlflow.log_metric("val_loss", val_loss, step=epoch)
+    
+    # Log artifacts
+    mlflow.log_artifact("confusion_matrix.png")
+    mlflow.log_artifact("feature_importance.csv")
+    
+    # Log model
+    mlflow.sklearn.log_model(model, "model")
+```
+
+## Distributed Training
+
+For large models and datasets, see:
+
+<Card title="Distributed Training Guide" icon="network-wired" href="/machine-learning/training/distributed-training">
+  Learn about PyTorch DDP, DeepSpeed, and TensorFlow distributed strategies
+</Card>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Data Assets">
+    Register datasets for versioning and reproducibility:
+    
+    ```python
+    from azure.ai.ml.entities import Data
+    from azure.ai.ml.constants import AssetTypes
+    
+    data_asset = Data(
+        name="training-data",
+        version="1.0",
+        path="azureml://datastores/data/paths/train/",
+        type=AssetTypes.URI_FOLDER
+    )
+    ml_client.data.create_or_update(data_asset)
+    ```
+  </Accordion>
+  
+  <Accordion title="Version Environments">
+    Pin dependencies for reproducible training:
+    
+    ```yaml
+    # environment.yml
+    dependencies:
+      - python=3.10
+      - pytorch=2.0.0
+      - torchvision=0.15.0
+      - cudatoolkit=11.7
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Managed Identities">
+    Avoid storing credentials in code:
+    
+    ```python
+    from azure.identity import DefaultAzureCredential
+    
+    credential = DefaultAzureCredential()
+    ml_client = MLClient(credential, subscription_id, rg, workspace)
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor Costs">
+    Track spending with tags:
+    
+    ```python
+    job = command(
+        ...
+        tags={"project": "fraud-detection", "cost-center": "ml-team"}
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Training Examples by Framework
+
+<CardGroup cols={2}>
+  <Card title="PyTorch" icon="fire">
+    Deep learning with PyTorch on GPU clusters
+  </Card>
+  <Card title="TensorFlow" icon="brain">
+    Neural networks with TensorFlow distributed
+  </Card>
+  <Card title="Scikit-learn" icon="flask">
+    Traditional ML algorithms at scale
+  </Card>
+  <Card title="XGBoost" icon="tree">
+    Gradient boosting for structured data
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Distributed Training" icon="network-wired" href="/machine-learning/training/distributed-training">
+    Scale training across multiple GPUs
+  </Card>
+  <Card title="Deploy Models" icon="rocket" href="/machine-learning/deployment/overview">
+    Deploy trained models to endpoints
+  </Card>
+  <Card title="MLOps" icon="gears" href="/machine-learning/concepts/mlops">
+    Automate training pipelines
+  </Card>
+  <Card title="AutoML" icon="wand-magic-sparkles">
+    Automated machine learning
+  </Card>
+</CardGroup>

@@ -1,0 +1,589 @@
+---
+title: Model Deployment in Azure Machine Learning
+description: Learn how to deploy machine learning models to production using online endpoints, batch endpoints, and managed infrastructure.
+---
+
+# Deploy Models with Azure Machine Learning
+
+After training machine learning models, deploy them to production for inference using Azure Machine Learning endpoints. Deploy for real-time predictions or batch processing at scale.
+
+<Info>
+Azure ML provides managed endpoints with automatic scaling, monitoring, and security - no infrastructure management required.
+</Info>
+
+## Inference and Endpoints
+
+**Inference** is the process of applying new input data to a machine learning model to generate outputs (predictions, classifications, clusters, etc.).
+
+An **endpoint** is a stable, durable URL that can be used to request predictions from your model.
+
+<CardGroup cols={2}>
+  <Card title="Online Endpoints" icon="bolt" href="/machine-learning/deployment/endpoints">
+    Real-time inference with low latency
+  </Card>
+  <Card title="Batch Endpoints" icon="layer-group">
+    Asynchronous processing of large datasets
+  </Card>
+</CardGroup>
+
+## Endpoint Anatomy
+
+### Endpoint
+
+Provides:
+- **Stable URL**: e.g., `https://my-endpoint.eastus.inference.ml.azure.com`
+- **Authentication**: Key-based or Microsoft Entra ID
+- **Authorization**: Role-based access control
+
+### Deployment
+
+Contains:
+- **Model**: Trained model files
+- **Code**: Scoring script (optional for MLflow models)
+- **Environment**: Software dependencies
+- **Compute**: Resources to run inference
+
+<Note>
+One endpoint can contain multiple deployments, enabling A/B testing and safe rollouts.
+</Note>
+
+## Deployment Types
+
+<Tabs>
+  <Tab title="Managed Online Endpoints">
+    **Best for:** Real-time, low-latency inference
+    
+    **Features:**
+    - Fully managed compute and scaling
+    - Built-in monitoring and logging
+    - Traffic splitting for A/B testing
+    - Zero-downtime updates
+    - Cost tracking per deployment
+    
+    **Use when:**
+    - Response time is critical (&lt;1 second)
+    - Request-response pattern
+    - Small payloads (fits in HTTP request)
+    - Need to scale based on traffic
+    
+    ```python
+    from azure.ai.ml.entities import ManagedOnlineEndpoint
+    
+    endpoint = ManagedOnlineEndpoint(
+        name="my-endpoint",
+        description="Production inference endpoint",
+        auth_mode="key"
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Batch Endpoints">
+    **Best for:** Long-running, large-scale inference
+    
+    **Features:**
+    - Process files from Azure Storage
+    - Parallel processing across compute nodes
+    - Scheduled or on-demand execution
+    - No compute cost when idle
+    - Deploy models or pipelines
+    
+    **Use when:**
+    - Processing large files or datasets
+    - Can tolerate longer processing times
+    - Data stored in cloud storage
+    - Want cost optimization
+    
+    ```python
+    from azure.ai.ml.entities import BatchEndpoint
+    
+    endpoint = BatchEndpoint(
+        name="my-batch-endpoint",
+        description="Batch scoring endpoint"
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Kubernetes Endpoints">
+    **Best for:** On-premises or edge deployment
+    
+    **Features:**
+    - Deploy anywhere (cloud, edge, on-prem)
+    - Full infrastructure control
+    - Custom networking
+    - GPU support
+    
+    **Use when:**
+    - Need on-premises deployment
+    - Edge computing scenarios
+    - Existing Kubernetes infrastructure
+    - Custom networking requirements
+  </Tab>
+</Tabs>
+
+## Quick Start: Deploy a Model
+
+### 1. Register Your Model
+
+```python
+from azure.ai.ml import MLClient
+from azure.ai.ml.entities import Model
+from azure.identity import DefaultAzureCredential
+
+ml_client = MLClient(
+    DefaultAzureCredential(),
+    subscription_id="<subscription-id>",
+    resource_group="<resource-group>",
+    workspace_name="<workspace>"
+)
+
+# Register model
+model = Model(
+    path="./model",
+    name="sklearn-classifier",
+    description="Iris classification model",
+    type="mlflow_model"  # or "custom_model"
+)
+
+registered_model = ml_client.models.create_or_update(model)
+print(f"Registered: {registered_model.name} v{registered_model.version}")
+```
+
+### 2. Create Endpoint
+
+```python
+from azure.ai.ml.entities import ManagedOnlineEndpoint
+
+endpoint = ManagedOnlineEndpoint(
+    name="iris-classifier-endpoint",
+    description="Iris species classification",
+    auth_mode="key",
+    tags={"environment": "production", "team": "ml-ops"}
+)
+
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+print(f"Endpoint created: {endpoint.name}")
+```
+
+### 3. Deploy Model
+
+<Tabs>
+  <Tab title="MLflow Model (No Scoring Script)">
+    ```python
+    from azure.ai.ml.entities import ManagedOnlineDeployment, Model
+    
+    deployment = ManagedOnlineDeployment(
+        name="blue",
+        endpoint_name="iris-classifier-endpoint",
+        model=registered_model,
+        instance_type="Standard_DS3_v2",
+        instance_count=1,
+        request_settings={
+            "request_timeout_ms": 90000,
+            "max_concurrent_requests_per_instance": 1
+        },
+        liveness_probe={
+            "initial_delay": 10,
+            "period": 10,
+            "timeout": 2,
+            "failure_threshold": 3
+        }
+    )
+    
+    ml_client.online_deployments.begin_create_or_update(deployment).result()
+    
+    # Route 100% traffic to deployment
+    endpoint.traffic = {"blue": 100}
+    ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+    ```
+  </Tab>
+  
+  <Tab title="Custom Model (With Scoring Script)">
+    Create `score.py`:
+    
+    ```python
+    import json
+    import joblib
+    import numpy as np
+    
+    def init():
+        global model
+        model_path = os.path.join(
+            os.getenv("AZUREML_MODEL_DIR"), 
+            "model.pkl"
+        )
+        model = joblib.load(model_path)
+    
+    def run(raw_data):
+        try:
+            data = json.loads(raw_data)["data"]
+            data = np.array(data)
+            predictions = model.predict(data)
+            return predictions.tolist()
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+    ```
+    
+    Deploy with scoring script:
+    
+    ```python
+    from azure.ai.ml.entities import (
+        ManagedOnlineDeployment,
+        CodeConfiguration,
+        Environment
+    )
+    
+    deployment = ManagedOnlineDeployment(
+        name="blue",
+        endpoint_name="iris-classifier-endpoint",
+        model=registered_model,
+        code_configuration=CodeConfiguration(
+            code="./src",
+            scoring_script="score.py"
+        ),
+        environment="azureml://registries/azureml/environments/sklearn-1.5/versions/1",
+        instance_type="Standard_DS3_v2",
+        instance_count=1
+    )
+    
+    ml_client.online_deployments.begin_create_or_update(deployment).result()
+    ```
+  </Tab>
+</Tabs>
+
+### 4. Test the Deployment
+
+```python
+# Test with sample data
+sample_data = {
+    "data": [
+        [5.1, 3.5, 1.4, 0.2],
+        [6.2, 2.9, 4.3, 1.3]
+    ]
+}
+
+# Invoke endpoint
+response = ml_client.online_endpoints.invoke(
+    endpoint_name="iris-classifier-endpoint",
+    request_file="sample_request.json",
+    deployment_name="blue"  # Optional: test specific deployment
+)
+
+print(f"Predictions: {response}")
+```
+
+## Deployment Patterns
+
+### Blue-Green Deployment
+
+Switch traffic between two deployments instantly:
+
+```python
+# Deploy new version to "green"
+green_deployment = ManagedOnlineDeployment(
+    name="green",
+    endpoint_name="iris-classifier-endpoint",
+    model=new_model_version,
+    instance_type="Standard_DS3_v2",
+    instance_count=1
+)
+ml_client.online_deployments.begin_create_or_update(green_deployment).result()
+
+# Test green deployment
+response = ml_client.online_endpoints.invoke(
+    endpoint_name="iris-classifier-endpoint",
+    request_file="test.json",
+    deployment_name="green"
+)
+
+# Switch all traffic to green
+endpoint.traffic = {"green": 100}
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+
+# Delete old blue deployment
+ml_client.online_deployments.begin_delete(
+    name="blue",
+    endpoint_name="iris-classifier-endpoint"
+).result()
+```
+
+### Canary Deployment
+
+Gradually shift traffic to test new version:
+
+```python
+# Start with 10% traffic to new version
+endpoint.traffic = {"blue": 90, "green": 10}
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+
+# Monitor metrics, then increase
+endpoint.traffic = {"blue": 50, "green": 50}
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+
+# Complete rollout
+endpoint.traffic = {"green": 100}
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+```
+
+### A/B Testing
+
+Compare two model versions in production:
+
+```python
+# Split traffic evenly
+endpoint.traffic = {
+    "model-v1": 50,
+    "model-v2": 50
+}
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+
+# Monitor business metrics to choose winner
+# Then route 100% to better performing model
+```
+
+## Scaling and Performance
+
+### Autoscaling
+
+Configure automatic scaling based on metrics:
+
+```python
+from azure.ai.ml.entities import OnlineScaleSettings
+
+deployment = ManagedOnlineDeployment(
+    name="blue",
+    endpoint_name="my-endpoint",
+    model=model,
+    instance_type="Standard_DS3_v2",
+    instance_count=1,
+    scale_settings=OnlineScaleSettings(
+        scale_type="TargetUtilization",
+        min_instances=1,
+        max_instances=10,
+        target_utilization_percentage=70,
+        polling_interval=10
+    )
+)
+```
+
+### Resource Limits
+
+Control compute resources:
+
+```python
+deployment = ManagedOnlineDeployment(
+    name="blue",
+    endpoint_name="my-endpoint",
+    model=model,
+    instance_type="Standard_DS3_v2",
+    instance_count=2,
+    request_settings={
+        "request_timeout_ms": 90000,
+        "max_concurrent_requests_per_instance": 5,
+        "max_queue_wait_ms": 60000
+    }
+)
+```
+
+## Monitoring Deployments
+
+### View Metrics in Azure Portal
+
+Key metrics to monitor:
+- Request latency (P50, P95, P99)
+- Requests per second
+- HTTP status codes
+- CPU/GPU utilization
+- Memory usage
+
+### Query Logs
+
+```python
+# Get deployment logs
+logs = ml_client.online_deployments.get_logs(
+    name="blue",
+    endpoint_name="iris-classifier-endpoint",
+    lines=100
+)
+print(logs)
+```
+
+### Application Insights Integration
+
+```python
+from applicationinsights import TelemetryClient
+
+tc = TelemetryClient('<instrumentation-key>')
+
+# Log custom events
+tc.track_event('PredictionMade', {
+    'model_version': '1.2.0',
+    'latency_ms': 45
+})
+tc.flush()
+```
+
+## Security
+
+### Authentication
+
+<Tabs>
+  <Tab title="Key-Based">
+    ```python
+    # Get endpoint keys
+    keys = ml_client.online_endpoints.get_keys(
+        name="iris-classifier-endpoint"
+    )
+    
+    # Make authenticated request
+    import requests
+    
+    headers = {
+        "Authorization": f"Bearer {keys.primary_key}",
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(
+        endpoint.scoring_uri,
+        headers=headers,
+        json=sample_data
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Microsoft Entra ID">
+    ```python
+    from azure.identity import DefaultAzureCredential
+    import requests
+    
+    credential = DefaultAzureCredential()
+    token = credential.get_token(
+        "https://ml.azure.com/.default"
+    )
+    
+    headers = {
+        "Authorization": f"Bearer {token.token}",
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(
+        endpoint.scoring_uri,
+        headers=headers,
+        json=sample_data
+    )
+    ```
+  </Tab>
+</Tabs>
+
+### Network Security
+
+Deploy with private networking:
+
+```python
+endpoint = ManagedOnlineEndpoint(
+    name="secure-endpoint",
+    public_network_access="disabled",
+    identity={
+        "type": "SystemAssigned"
+    }
+)
+
+ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+```
+
+## Cost Optimization
+
+<AccordionGroup>
+  <Accordion title="Right-Size Instances">
+    Start with smaller instances and scale up:
+    
+    | Instance Type | vCPUs | RAM | Cost (Relative) |
+    |---------------|-------|-----|----------------|
+    | Standard_DS2_v2 | 2 | 7GB | 1x |
+    | Standard_DS3_v2 | 4 | 14GB | 2x |
+    | Standard_DS4_v2 | 8 | 28GB | 4x |
+  </Accordion>
+  
+  <Accordion title="Use Autoscaling">
+    Scale to zero during low-traffic periods:
+    ```python
+    scale_settings=OnlineScaleSettings(
+        min_instances=0,  # Scale to zero when idle
+        max_instances=10
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Batch for Bulk Processing">
+    Use batch endpoints for large datasets - only pay during job execution:
+    ```python
+    batch_deployment = BatchDeployment(
+        name="default",
+        endpoint_name="batch-endpoint",
+        model=model,
+        compute="batch-cluster",
+        instance_count=5  # Parallel processing
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor Cost per Deployment">
+    Track spending in Azure Cost Management:
+    - Filter by deployment tags
+    - Set budget alerts
+    - Analyze cost trends
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Deployment Fails">
+    Check:
+    1. Model files are valid
+    2. Scoring script has no syntax errors
+    3. Environment dependencies are correct
+    4. Sufficient quota for instance type
+    
+    View deployment logs:
+    ```python
+    logs = ml_client.online_deployments.get_logs(
+        name="blue",
+        endpoint_name="my-endpoint",
+        lines=500
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="High Latency">
+    Solutions:
+    - Use GPU instances for deep learning models
+    - Optimize model (quantization, pruning)
+    - Increase concurrent requests per instance
+    - Enable request batching
+    - Use model caching
+  </Accordion>
+  
+  <Accordion title="Out of Memory">
+    - Switch to larger instance type
+    - Reduce batch size in scoring script
+    - Optimize model memory usage
+    - Use model compression techniques
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Online Endpoints" icon="bolt" href="/machine-learning/deployment/endpoints">
+    Learn more about real-time inference
+  </Card>
+  <Card title="Batch Scoring" icon="layer-group">
+    Deploy models for batch processing
+  </Card>
+  <Card title="Monitor Deployments" icon="chart-line">
+    Track performance and costs
+  </Card>
+  <Card title="MLOps" icon="gears" href="/machine-learning/concepts/mlops">
+    Automate deployment pipelines
+  </Card>
+</CardGroup>

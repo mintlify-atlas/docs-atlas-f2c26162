@@ -1,0 +1,250 @@
+---
+title: Quickstart - Get Started with Azure Machine Learning
+description: Create your first Azure Machine Learning workspace and compute instance to start building ML models.
+---
+
+# Quickstart: Get Started with Azure Machine Learning
+
+In this quickstart, you create the resources needed to start working with Azure Machine Learning and train your first model.
+
+<Info>
+This tutorial uses Azure Machine Learning studio for a streamlined getting-started experience. You can also use the SDK, CLI, or Azure portal.
+</Info>
+
+## Prerequisites
+
+- An Azure account with an active subscription. [Create an account for free](https://azure.microsoft.com/pricing/purchase-options/azure-account)
+
+## What You'll Create
+
+<CardGroup cols={2}>
+  <Card title="Workspace" icon="building">
+    Central resource to view and manage all ML artifacts
+  </Card>
+  <Card title="Compute Instance" icon="server">
+    Preconfigured cloud resource for development and training
+  </Card>
+</CardGroup>
+
+## Step 1: Create a Workspace
+
+The workspace is the top-level resource for your machine learning activities, providing a centralized place to view and manage artifacts.
+
+<Steps>
+  <Step title="Sign in to Azure ML Studio">
+    Navigate to [Azure Machine Learning studio](https://ml.azure.com) and sign in with your Azure account.
+  </Step>
+  <Step title="Create Workspace">
+    Select **Create workspace** and provide the following information:
+    
+    | Field | Description |
+    |-------|-------------|
+    | Workspace name | Enter a unique name (case-insensitive) |
+    | Friendly name | Optional display name with spaces/special characters |
+    | Hub | Leave blank if you don't have access to a hub |
+  </Step>
+  <Step title="Configure Advanced Settings">
+    If you didn't select a hub, provide:
+    
+    - **Subscription**: Your Azure subscription
+    - **Resource group**: Use existing or create new
+    - **Region**: Select closest to your users/data
+  </Step>
+  <Step title="Create">
+    Select **Create** to provision the workspace and all required resources.
+  </Step>
+</Steps>
+
+<Note>
+Workspace creation automatically provisions Azure Storage, Container Registry, Key Vault, and Application Insights.
+</Note>
+
+## Step 2: Create a Compute Instance
+
+A compute instance is a preconfigured cloud-based compute resource for running Jupyter notebooks and Python scripts.
+
+<Steps>
+  <Step title="Open Workspace">
+    Select your newly created workspace in the studio.
+  </Step>
+  <Step title="Create Compute">
+    1. On the top right, select **New**
+    2. Select **Compute instance** from the list
+  </Step>
+  <Step title="Configure Instance">
+    - **Name**: Enter a unique compute instance name
+    - **Virtual machine size**: Keep default or select based on needs
+    - **Settings**: Keep defaults unless required by policy
+  </Step>
+  <Step title="Review and Create">
+    Select **Review + Create**, then **Create**
+  </Step>
+</Steps>
+
+<Warning>
+The compute instance will incur costs while running. Enable idle shutdown to minimize costs.
+</Warning>
+
+## Step 3: Explore Azure ML Studio
+
+The studio provides a comprehensive interface for machine learning development:
+
+### Authoring Section
+
+<Tabs>
+  <Tab title="Notebooks">
+    Create and run Jupyter notebooks with built-in compute integration
+    - Clone sample notebooks
+    - Create custom notebooks
+    - Run Python scripts
+  </Tab>
+  <Tab title="Automated ML">
+    Build models without writing code
+    - Upload datasets
+    - Configure training settings
+    - Automatically find best model
+  </Tab>
+  <Tab title="Designer">
+    Drag-and-drop interface for ML pipelines
+    - Prebuilt components
+    - Visual workflow design
+    - No code required
+  </Tab>
+</Tabs>
+
+### Assets Section
+
+Track resources created during ML development:
+
+- **Data**: Registered datasets and data assets
+- **Models**: Trained and registered models
+- **Environments**: Software dependencies
+- **Components**: Reusable pipeline steps
+- **Jobs**: Training run history
+
+### Manage Section
+
+Create and configure compute and external services:
+
+- Compute instances and clusters
+- Datastores and connections
+- Endpoints for deployment
+- Data labeling projects
+
+## Step 4: Run Your First Notebook
+
+<Steps>
+  <Step title="Access Samples">
+    1. Navigate to **Notebooks** in the left menu
+    2. Select the **Samples** tab at the top
+  </Step>
+  <Step title="Clone Example">
+    1. Open the **SDK v2** folder
+    2. Browse to a tutorial notebook
+    3. Select **Clone this notebook** to copy to your workspace
+  </Step>
+  <Step title="Run Notebook">
+    1. Open the cloned notebook from **Files**
+    2. Select your compute instance at the top
+    3. Run cells using **Shift+Enter** or the **Run** button
+  </Step>
+</Steps>
+
+## Connect to Your Workspace Programmatically
+
+After creating your workspace, connect using the SDK:
+
+<CodeGroup>
+```python Python SDK
+from azure.ai.ml import MLClient
+from azure.identity import DefaultAzureCredential
+
+# Enter your workspace details
+subscription_id = "<SUBSCRIPTION_ID>"
+resource_group = "<RESOURCE_GROUP>"
+workspace_name = "<WORKSPACE_NAME>"
+
+# Connect to workspace
+ml_client = MLClient(
+    DefaultAzureCredential(),
+    subscription_id,
+    resource_group,
+    workspace_name
+)
+
+print(f"Connected to workspace: {ml_client.workspace_name}")
+```
+
+```bash Azure CLI
+# Login to Azure
+az login
+
+# Set active subscription
+az account set --subscription <SUBSCRIPTION_ID>
+
+# List workspaces
+az ml workspace list --resource-group <RESOURCE_GROUP>
+```
+</CodeGroup>
+
+## Sample Training Job
+
+Submit a simple training job using the Python SDK:
+
+```python
+from azure.ai.ml import command
+from azure.ai.ml import Input
+
+# Define training job
+job = command(
+    code="./src",
+    command="python train.py --data ${{inputs.data}}",
+    inputs={
+        "data": Input(type="uri_folder", path="azureml://datastores/workspaceblobstore/paths/data")
+    },
+    environment="AzureML-sklearn-1.0@latest",
+    compute="cpu-cluster",
+    display_name="quickstart-training-job",
+)
+
+# Submit job
+returned_job = ml_client.jobs.create_or_update(job)
+print(f"Job submitted: {returned_job.name}")
+```
+
+## Cost Management
+
+<Accordion title="Minimize Azure ML Costs">
+  To avoid charges when resources are idle:
+  
+  - **Compute clusters**: Set minimum nodes to 0
+  - **Compute instances**: Enable idle shutdown
+  - **Serverless compute**: No configuration needed - automatically scales to zero
+  
+  <Note>
+  You still pay for disk, public IP, and load balancer when compute instance is stopped.
+  </Note>
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Train Your First Model" icon="graduation-cap" href="/machine-learning/training/overview">
+    Learn how to train machine learning models
+  </Card>
+  <Card title="Workspace Concepts" icon="book" href="/machine-learning/concepts/workspace">
+    Deep dive into workspace features
+  </Card>
+  <Card title="Compute Resources" icon="server" href="/machine-learning/concepts/compute">
+    Understand compute options
+  </Card>
+  <Card title="Deploy Models" icon="rocket" href="/machine-learning/deployment/overview">
+    Deploy models to production
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [Azure Machine Learning Samples](https://github.com/Azure/azureml-examples)
+- [Python SDK Documentation](https://learn.microsoft.com/python/api/overview/azure/ml/)
+- [CLI v2 Reference](https://learn.microsoft.com/cli/azure/ml)

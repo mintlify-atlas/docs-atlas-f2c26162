@@ -1,0 +1,334 @@
+---
+title: 'Foundry REST API'
+description: 'Complete REST API reference for Azure AI Foundry Local services'
+---
+
+# Foundry Local REST API Reference
+
+The Foundry Local REST API provides endpoints for managing AI models, performing inference, and controlling the local inference service. All endpoints are compatible with the OpenAI Chat Completions API format.
+
+<Note>
+This API is under active development and may include breaking changes without notice. Monitor the changelog before building production applications.
+</Note>
+
+## Base URL
+
+```
+http://localhost:5272
+```
+
+## Authentication
+
+For local usage, no authentication is required. The API uses a default placeholder API key.
+
+## Chat Completions
+
+### POST /v1/chat/completions
+
+Process chat completion requests with local AI models. Fully compatible with the OpenAI Chat Completions API.
+
+<ParamField path="model" type="string" required>
+  The specific model to use for completion (e.g., `qwen2.5-0.5b-instruct-generic-cpu`)
+</ParamField>
+
+<ParamField path="messages" type="array" required>
+  The conversation history as a list of message objects. Each message requires:
+  - `role` (string): Message sender's role - `system`, `user`, or `assistant`
+  - `content` (string): The actual message text
+</ParamField>
+
+<ParamField path="temperature" type="number">
+  Controls randomness (0 to 2). Higher values (0.8) create varied outputs, lower values (0.2) are focused
+</ParamField>
+
+<ParamField path="top_p" type="number">
+  Controls token selection diversity (0 to 1). Value of 0.1 considers only top 10% probability tokens
+</ParamField>
+
+<ParamField path="max_tokens" type="integer">
+  Maximum tokens to generate in the completion
+</ParamField>
+
+<ParamField path="stream" type="boolean">
+  When true, sends partial message responses as server-sent events
+</ParamField>
+
+<ParamField path="presence_penalty" type="number">
+  Value between -2.0 and 2.0. Positive values encourage new topics
+</ParamField>
+
+<ParamField path="frequency_penalty" type="number">
+  Value between -2.0 and 2.0. Positive values discourage repetition
+</ParamField>
+
+**Request Example:**
+
+<CodeGroup>
+```json Request
+{
+  "model": "qwen2.5-0.5b-instruct-generic-cpu",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 100
+}
+```
+
+```json Response
+{
+  "id": "chatcmpl-1234567890",
+  "object": "chat.completion",
+  "created": 1677851234,
+  "model": "qwen2.5-0.5b-instruct-generic-cpu",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "I'm doing well, thank you! How can I assist you today?"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 20,
+    "total_tokens": 30
+  }
+}
+```
+</CodeGroup>
+
+<ResponseField name="id" type="string">
+  Unique identifier for the chat completion
+</ResponseField>
+
+<ResponseField name="choices" type="array">
+  List of completion choices generated
+  - `index` (integer): Position of this choice
+  - `message` (object): Generated message with role and content
+  - `finish_reason` (string): Why generation stopped (`stop`, `length`, `function_call`)
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  Token usage statistics
+  - `prompt_tokens`: Tokens in the prompt
+  - `completion_tokens`: Tokens in the completion
+  - `total_tokens`: Total tokens used
+</ResponseField>
+
+## Model Management
+
+### GET /foundry/list
+
+Get a list of available Foundry Local models in the catalog.
+
+<ResponseField name="models" type="array">
+  Array of model objects with:
+  - `name`: Model identifier
+  - `displayName`: Human-readable name
+  - `version`: Model version
+  - `modelType`: Format (e.g., ONNX)
+  - `task`: Primary task (e.g., chat-completion)
+  - `fileSizeMb`: Size in megabytes
+  - `supportsToolCalling`: Tool calling support
+</ResponseField>
+
+### GET /openai/models
+
+List cached models, including local and registered external models.
+
+**Response Example:**
+
+```json
+["Phi-4-mini-instruct-generic-cpu", "phi-3.5-mini-instruct-generic-cpu"]
+```
+
+### POST /openai/download
+
+Download a model from the catalog to local storage.
+
+<Warning>
+Large model downloads can take significant time. Set a high timeout to avoid early termination.
+</Warning>
+
+<ParamField body="model" type="object" required>
+  Model specification:
+  - `Uri` (string): Model URI to download
+  - `Name` (string): Model name
+  - `ProviderType` (string): Provider (e.g., `AzureFoundryLocal`, `HuggingFace`)
+</ParamField>
+
+**Request Example:**
+
+```json
+{
+  "model": {
+    "Uri": "azureml://registries/azureml/models/Phi-4-mini-instruct-generic-cpu/versions/4",
+    "ProviderType": "AzureFoundryLocal",
+    "Name": "Phi-4-mini-instruct-generic-cpu:4"
+  }
+}
+```
+
+### GET /openai/load/{name}
+
+Load a model into memory for faster inference.
+
+<ParamField path="name" type="string" required>
+  The model name to load
+</ParamField>
+
+<ParamField query="ttl" type="integer">
+  Time to live in seconds. Overrides automatic unload settings
+</ParamField>
+
+<ParamField query="ep" type="string">
+  Execution provider: `dml`, `cuda`, `qnn`, `cpu`, `webgpu`
+</ParamField>
+
+**Example:**
+
+```bash
+GET /openai/load/Phi-4-mini-instruct-generic-cpu?ttl=3600&ep=dml
+```
+
+### GET /openai/unload/{name}
+
+Unload a model from memory.
+
+<ParamField path="name" type="string" required>
+  The model name to unload
+</ParamField>
+
+<ParamField query="force" type="boolean">
+  If true, ignores TTL settings and unloads immediately
+</ParamField>
+
+### GET /openai/loadedmodels
+
+Get the list of currently loaded models.
+
+**Response:**
+
+```json
+["Phi-4-mini-instruct-generic-cpu", "phi-3.5-mini-instruct-generic-cpu"]
+```
+
+## Service Status
+
+### GET /openai/status
+
+Get server status information.
+
+<ResponseField name="Endpoints" type="array">
+  HTTP server binding endpoints
+</ResponseField>
+
+<ResponseField name="ModelDirPath" type="string">
+  Directory where local models are stored
+</ResponseField>
+
+<ResponseField name="PipeName" type="string">
+  Current NamedPipe server name
+</ResponseField>
+
+**Response Example:**
+
+```json
+{
+  "Endpoints": ["http://localhost:5272"],
+  "ModelDirPath": "/path/to/models",
+  "PipeName": "inference_agent"
+}
+```
+
+## Token Counting
+
+### POST /v1/chat/completions/tokenizer/encode/count
+
+Count tokens for a chat completion request without performing inference.
+
+<ParamField body="model" type="string" required>
+  Model to use for tokenization
+</ParamField>
+
+<ParamField body="messages" type="array" required>
+  Array of message objects with role and content
+</ParamField>
+
+**Example:**
+
+<CodeGroup>
+```json Request
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "This is a system message"
+    },
+    {
+      "role": "user",
+      "content": "Hello, what is Microsoft?"
+    }
+  ],
+  "model": "Phi-4-mini-instruct-cuda-gpu"
+}
+```
+
+```json Response
+{
+  "tokenCount": 23
+}
+```
+</CodeGroup>
+
+## GPU Management
+
+### GET /openai/getgpudevice
+
+Get the current GPU device ID.
+
+**Response:** Integer representing the GPU device ID
+
+### GET /openai/setgpudevice/{deviceId}
+
+Set the active GPU device.
+
+<ParamField path="deviceId" type="integer" required>
+  The GPU device ID to use
+</ParamField>
+
+**Example:**
+
+```bash
+GET /openai/setgpudevice/1
+```
+
+## Error Handling
+
+All API errors return standard HTTP status codes:
+
+- `200` - Success
+- `400` - Bad Request (invalid parameters)
+- `404` - Not Found (model or resource doesn't exist)
+- `500` - Internal Server Error
+
+## Rate Limits
+
+No rate limits are enforced for local usage. Performance is limited by hardware capabilities.
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="SDK Reference" icon="code" href="/sdk/python">
+    Use the Python SDK for easier integration
+  </Card>
+  <Card title="JavaScript SDK" icon="js" href="/sdk/javascript">
+    Node.js and browser integration
+  </Card>
+</CardGroup>

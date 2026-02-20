@@ -1,0 +1,92 @@
+---
+title: Model Deployment
+description: Learn how to deploy AI models in Microsoft Foundry using serverless APIs, provisioned throughput, and managed compute.
+---
+
+# Model Deployment
+
+Deploy models in Microsoft Foundry using multiple options optimized for different scenarios.
+
+## Deployment Methods
+
+### Serverless API Deployment
+
+**Characteristics**:
+- Pay-per-token billing
+- Microsoft-managed infrastructure
+- Automatic scaling
+- No capacity planning
+
+**Example**:
+```python
+# Model is accessed via serverless API endpoint
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages
+)
+```
+
+### Provisioned Throughput
+
+**Characteristics**:
+- Reserved capacity (PTUs)
+- Predictable cost and performance
+- Dedicated resources
+- Fungible across models
+
+**Example**:
+```python
+deployment = client.deployments.create(
+    model="gpt-4o",
+    sku={
+        "name": "ProvisionedManaged",
+        "capacity": 100  # Provisioned Throughput Units
+    }
+)
+```
+
+### Managed Compute
+
+**Characteristics**:
+- Deploy to Azure VMs
+- Billed for VM hours
+- Supports open-source models
+- Full infrastructure control
+
+## Deployment Process
+
+<Steps>
+  <Step title="Select Model">
+    Choose from model catalog based on requirements
+  </Step>
+  <Step title="Choose Deployment Option">
+    Serverless, Provisioned, or Managed Compute
+  </Step>
+  <Step title="Configure Settings">
+    Region, capacity, version settings
+  </Step>
+  <Step title="Deploy">
+    Create deployment via portal, CLI, or SDK
+  </Step>
+  <Step title="Test">
+    Verify deployment with test requests
+  </Step>
+</Steps>
+
+## Regional Considerations
+
+- Model availability varies by region
+- Check [Region Support](/foundry/models/region-support)
+- Consider data residency requirements
+- Evaluate latency for global users
+
+## Model Lifecycle
+
+- **GA**: Full support and SLA
+- **Deprecation Notice**: 6-12 months warning
+- **Deprecated**: No new deployments
+- **Retired**: Model unavailable
+
+Set up auto-update for seamless transitions.
+
+See [Model Overview](/foundry/models/overview) for model catalog details.
